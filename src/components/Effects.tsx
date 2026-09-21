@@ -4,6 +4,161 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 gsap.registerPlugin(ScrollTrigger,useGSAP);
-export function PageEffects(){const {pathname}=useLocation();const shutters=useRef<HTMLDivElement>(null);const first=useRef(true);useGSAP(()=>{const media=gsap.matchMedia();media.add('(prefers-reduced-motion: no-preference)',()=>{document.querySelectorAll('[data-reveal]').forEach(el=>{gsap.from(el,{y:24,opacity:0,duration:.8,ease:'power2.out',scrollTrigger:{trigger:el,start:'top 95%',once:true}});});if(!first.current&&shutters.current){gsap.fromTo(shutters.current.children,{scaleY:1},{scaleY:0,stagger:.025,duration:.5,ease:'power3.inOut',transformOrigin:'top'});}});first.current=false;return()=>media.revert();},{dependencies:[pathname],revertOnUpdate:true});useEffect(()=>{window.scrollTo({top:0,behavior:'instant'});const main=document.getElementById('main');main?.focus({preventScroll:true});},[pathname]);return <div className="shutters" ref={shutters} aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i}/>)}</div>;}
-export function MagneticCursor(){const ref=useRef<HTMLDivElement>(null);useEffect(()=>{if(!matchMedia('(pointer:fine) and (prefers-reduced-motion:no-preference)').matches)return;let x=-100,y=-100,px=-100,py=-100,raf=0;let target:HTMLElement|null=null;const move=(e:PointerEvent)=>{x=e.clientX;y=e.clientY;const hit=(e.target as HTMLElement).closest<HTMLElement>('[data-magnetic], [data-cursor]');if(target&&target!==hit)target.style.translate='';target=hit;if(ref.current){ref.current.textContent=hit?.dataset.cursor||'';ref.current.classList.toggle('large',!!hit?.dataset.cursor);ref.current.classList.add('visible');}if(hit?.hasAttribute('data-magnetic')){const r=hit.getBoundingClientRect();hit.style.translate=`${(x-r.left-r.width/2)*.09}px ${(y-r.top-r.height/2)*.1}px`;}};const leave=()=>ref.current?.classList.remove('visible');const frame=()=>{px+=(x-px)*.18;py+=(y-py)*.18;if(ref.current)ref.current.style.transform=`translate3d(${px}px,${py}px,0)`;raf=requestAnimationFrame(frame);};document.addEventListener('pointermove',move);document.addEventListener('pointerleave',leave);raf=requestAnimationFrame(frame);return()=>{cancelAnimationFrame(raf);document.removeEventListener('pointermove',move);document.removeEventListener('pointerleave',leave);if(target)target.style.translate='';};},[]);return <div className="cursor" ref={ref} aria-hidden="true"/>;}
-export function Intro(){const [visible,setVisible]=useState(false);const canvas=useRef<HTMLCanvasElement>(null);useEffect(()=>{try{if(!sessionStorage.getItem('tjad-intro')&&!matchMedia('(prefers-reduced-motion:reduce)').matches){setVisible(true);sessionStorage.setItem('tjad-intro','1');}}catch{/* Storage disabled: intro remains skipped. */}},[]);useEffect(()=>{if(!visible||!canvas.current)return;const c=canvas.current,ctx=c.getContext('2d');if(!ctx)return;const w=c.width=900,h=c.height=360;ctx.font='300 98px Arial';ctx.textAlign='center';ctx.fillText('LIGHT.',w/2,h/2+30);const pixels=ctx.getImageData(0,0,w,h).data;const points:{x:number;y:number;sx:number;sy:number}[]=[];for(let y=0;y<h;y+=5)for(let x=0;x<w;x+=5)if(pixels[(y*w+x)*4+3]>100)points.push({x,y,sx:Math.random()*w,sy:Math.random()*h});const start=performance.now();let raf=0;const frame=(t:number)=>{const progress=Math.min(1,(t-start)/1100),e=1-Math.pow(1-progress,3);ctx.clearRect(0,0,w,h);ctx.fillStyle='#c6b58b';for(const p of points){ctx.beginPath();ctx.arc(p.sx+(p.x-p.sx)*e,p.sy+(p.y-p.sy)*e,1.1,0,Math.PI*2);ctx.fill();}raf=requestAnimationFrame(frame);};raf=requestAnimationFrame(frame);const timeout=setTimeout(()=>setVisible(false),1800);return()=>{clearTimeout(timeout);cancelAnimationFrame(raf);};},[visible]);return visible?<div className="intro" aria-label="品牌开场动画"><canvas ref={canvas} aria-hidden="true"/><button onClick={()=>setVisible(false)}>跳过开场 <span>↗</span></button></div>:null;}
+export function PageEffects() {
+  const { pathname } = useLocation();
+  const shutters = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+
+  useGSAP(
+    () => {
+      // Ensure scroll is at 0 before computing ScrollTrigger positions
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const main = document.getElementById('main');
+      main?.focus({ preventScroll: true });
+
+      const media = gsap.matchMedia();
+      media.add('(prefers-reduced-motion: no-preference)', () => {
+        document.querySelectorAll('[data-reveal]').forEach(el => {
+          gsap.from(el, {
+            y: 24,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: el, start: 'top 95%', once: true }
+          });
+        });
+        if (!first.current && shutters.current) {
+          gsap.fromTo(
+            shutters.current.children,
+            { scaleY: 1 },
+            { scaleY: 0, stagger: 0.025, duration: 0.5, ease: 'power3.inOut', transformOrigin: 'top' }
+          );
+        }
+      });
+      first.current = false;
+      ScrollTrigger.refresh();
+      return () => media.revert();
+    },
+    { dependencies: [pathname], revertOnUpdate: true }
+  );
+
+  return (
+    <div className="shutters" ref={shutters} aria-hidden="true">
+      {Array.from({ length: 5 }, (_, i) => (
+        <i key={i} />
+      ))}
+    </div>
+  );
+}
+
+export function MagneticCursor() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!matchMedia('(pointer:fine) and (prefers-reduced-motion:no-preference)').matches) return;
+    let x = -100,
+      y = -100,
+      px = -100,
+      py = -100,
+      raf = 0;
+    let target: HTMLElement | null = null;
+    const move = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-magnetic], [data-cursor]');
+      if (target && target !== hit) target.style.translate = '';
+      target = hit;
+      if (ref.current) {
+        ref.current.textContent = hit?.dataset.cursor || '';
+        ref.current.classList.toggle('large', !!hit?.dataset.cursor);
+        ref.current.classList.add('visible');
+      }
+      if (hit?.hasAttribute('data-magnetic')) {
+        const r = hit.getBoundingClientRect();
+        hit.style.translate = `${(x - r.left - r.width / 2) * 0.09}px ${(y - r.top - r.height / 2) * 0.1}px`;
+      }
+    };
+    const leave = () => ref.current?.classList.remove('visible');
+    const frame = () => {
+      px += (x - px) * 0.18;
+      py += (y - py) * 0.18;
+      if (ref.current) ref.current.style.transform = `translate3d(${px}px,${py}px,0)`;
+      raf = requestAnimationFrame(frame);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerleave', leave);
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerleave', leave);
+      if (target) target.style.translate = '';
+    };
+  }, []);
+  return <div className="cursor" ref={ref} aria-hidden="true" />;
+}
+
+export function Intro() {
+  const [visible, setVisible] = useState(false);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('tjad-intro') && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+        setVisible(true);
+        sessionStorage.setItem('tjad-intro', '1');
+      }
+    } catch {
+      /* Storage disabled: intro remains skipped. */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!visible || !canvas.current) return;
+    const c = canvas.current,
+      ctx = c.getContext('2d');
+    if (!ctx) return;
+    const w = (c.width = 900),
+      h = (c.height = 360);
+    ctx.font = '300 98px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('LIGHT.', w / 2, h / 2 + 30);
+    const pixels = ctx.getImageData(0, 0, w, h).data;
+    const points: { x: number; y: number; sx: number; sy: number }[] = [];
+    for (let y = 0; y < h; y += 5)
+      for (let x = 0; x < w; x += 5)
+        if (pixels[(y * w + x) * 4 + 3] > 100) points.push({ x, y, sx: Math.random() * w, sy: Math.random() * h });
+    const start = performance.now();
+    let raf = 0;
+    const frame = (t: number) => {
+      const progress = Math.min(1, (t - start) / 1100),
+        e = 1 - Math.pow(1 - progress, 3);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#c6b58b';
+      for (const p of points) {
+        ctx.beginPath();
+        ctx.arc(p.sx + (p.x - p.sx) * e, p.sy + (p.y - p.sy) * e, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    const timeout = setTimeout(() => setVisible(false), 1800);
+    return () => {
+      clearTimeout(timeout);
+      cancelAnimationFrame(raf);
+    };
+  }, [visible]);
+
+  return visible ? (
+    <div className="intro" aria-label="品牌开场动画" onClick={() => setVisible(false)}>
+      <canvas ref={canvas} aria-hidden="true" />
+      <button
+        onClick={e => {
+          e.stopPropagation();
+          setVisible(false);
+        }}
+      >
+        跳过开场 <span>↗</span>
+      </button>
+    </div>
+  ) : null;
+}
