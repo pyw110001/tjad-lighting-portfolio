@@ -1,0 +1,8 @@
+import { useEffect,useRef,useState } from 'react';
+import { Canvas,useFrame,useLoader } from '@react-three/fiber';
+import { TextureLoader,Vector2 } from 'three';
+import { useActivity,canWebGL } from './useActivity';
+const vert=`varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position,1.);}`;
+const frag=`uniform sampler2D uMap;uniform vec2 uPointer;uniform vec2 uSize;varying vec2 vUv;void main(){vec2 uv=vUv;float ratio=uSize.x/uSize.y;float imgRatio=1.5;if(ratio>imgRatio){uv.y=(uv.y-.5)*imgRatio/ratio+.5;}else{uv.x=(uv.x-.5)*ratio/imgRatio+.5;}uv+=(uPointer-.5)*.004;vec4 c=texture2D(uMap,uv);float light=exp(-length((vUv-uPointer)*vec2(ratio,1.))*5.)*.045;gl_FragColor=vec4(c.rgb*(1.+light),1.);}`;
+function ImageField(){const map=useLoader(TextureLoader,'/assets/brand/hero.webp');const uniforms=useRef({uMap:{value:map},uPointer:{value:new Vector2(.5,.5)},uSize:{value:new Vector2(1536,1024)}});useFrame(({pointer,size})=>{uniforms.current.uPointer.value.lerp(new Vector2((pointer.x+1)/2,(pointer.y+1)/2),.05);uniforms.current.uSize.value.set(size.width,size.height);});return <mesh><planeGeometry args={[2,2]}/><shaderMaterial uniforms={uniforms.current} vertexShader={vert} fragmentShader={frag} depthTest={false} depthWrite={false}/></mesh>;}
+export default function HeroScene(){const ref=useRef<HTMLDivElement>(null);const active=useActivity(ref);const [available,setAvailable]=useState(false);useEffect(()=>setAvailable(canWebGL()),[]);return <div className="hero-webgl" ref={ref} aria-hidden="true">{available&&<Canvas frameloop={active?'always':'never'} dpr={[1,1.25]} gl={{antialias:false,alpha:true}} onCreated={({gl})=>{gl.domElement.addEventListener('webglcontextlost',()=>setAvailable(false),{once:true});}}><ImageField/></Canvas>}</div>;}

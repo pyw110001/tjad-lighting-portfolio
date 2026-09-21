@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import sharp from 'sharp';
+const dir='C:/Users/123/.codex/generated_images/01a0c2c9-8c82-7e33-b385-11b68367a0b0';
+await fs.mkdir('public/assets/brand',{recursive:true});await fs.mkdir('public/fonts',{recursive:true});await fs.mkdir('docs/design',{recursive:true});
+await sharp(path.join(dir,'exec-244022b3-1426-4784-a8fe-738ae1b47adb.png')).webp({quality:90}).toFile('public/assets/brand/hero.webp');
+await fs.copyFile('public/assets/brand/hero.webp','public/assets/brand/lab.webp');
+await fs.copyFile('node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2','public/fonts/inter-latin.woff2');
+await fs.copyFile('node_modules/@fontsource-variable/inter/LICENSE','public/fonts/OFL.txt');
+await fs.writeFile('public/fonts/font.css',"@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/inter-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+2000-206F;}");
+for(const [name,file] of Object.entries({'hero':'f99e8f63-8c54-420b-b1ab-d45629e628ce','work':'7e29b546-1a87-4b50-953a-680641ec3d07','lab':'d163805f-120e-4852-8de1-6df5804702d3','about':'3af42f77-c429-42bf-92a0-307442c940e6','detail':'b6799da3-dc60-42c1-8db7-daef47b97740','contact':'712b08ff-db2b-4791-85d0-30108a5a68fa'}))await fs.copyFile(path.join(dir,`exec-${file}.png`),`docs/design/${name}.png`);
+console.log('Brand asset and design references prepared.');

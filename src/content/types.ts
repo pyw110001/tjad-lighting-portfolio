@@ -1,0 +1,6 @@
+export interface ProjectMedia { id:string; projectId:number|null; source:string; width:number; height:number; kind:string; use:string; src:string; srcSet:string; alt:string; imageNumber:number }
+export interface Project { id:number; slug:string; name:string; fullName:string; english:string; categories:string[]; featured:boolean; homeOrder:number; city:string; year:string; facts:Record<string,string>; rawFacts:Record<string,string>; summary:string; analysis:string[]; source:string; sourceUrl:string; extraSource:string|null; sourceYear:number; note:string; cover:ProjectMedia; gallery:ProjectMedia[]; reference?:ProjectMedia; lab:string|null }
+export interface TeamContent { name:string; fullName:string; department:string; philosophy:string; intro:string; director:string; directorRole:string; directorBio:string; email:string; phone:string; sourceYear:number; sources:{name:string;url:string}[]; awards:{year:number;count:number}[]; awardNames:string[]; services:{title:string;items:string[]}[] }
+export type LabMode='field'|'pixel'|'day';
+export type PixelPattern='static'|'wave'|'gradient'|'pulse';
+export interface LabState { intensity:number; color:string; position:[number,number]; pattern:PixelPattern; speed:number; paused:boolean }
