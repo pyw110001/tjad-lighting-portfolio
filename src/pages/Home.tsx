@@ -5,7 +5,6 @@ import { ProjectCard,SectionTitle,TextLink,Arrow } from '../components/ui';
 import { LightButton } from '../design-system';
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
-  const [pointer, setPointer] = useState({ x: 0.5, y: 0.5 });
   const [isMoving, setIsMoving] = useState(false);
   const moveTimeoutRef = useRef<number | null>(null);
 
@@ -14,7 +13,8 @@ export function Hero() {
     const rect = ref.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    setPointer({ x, y });
+    ref.current.style.setProperty('--pointer-x', `${x}`);
+    ref.current.style.setProperty('--pointer-y', `${y}`);
     setIsMoving(true);
     if (moveTimeoutRef.current) window.clearTimeout(moveTimeoutRef.current);
     moveTimeoutRef.current = window.setTimeout(() => setIsMoving(false), 900);
@@ -31,12 +31,6 @@ export function Hero() {
       className="hero"
       ref={ref}
       onPointerMove={handlePointerMove}
-      style={
-        {
-          '--pointer-x': pointer.x,
-          '--pointer-y': pointer.y,
-        } as React.CSSProperties
-      }
     >
       <div className="hero-split-body">
         <div className="hero-copy-column">

@@ -38,7 +38,6 @@ export const LightNavbar: React.FC<LightNavbarProps> = ({
           className={({ isActive }) => `lis-nav-item ${isActive ? 'is-active' : ''}`}
           aria-label={item.labelZh}
           data-magnetic
-          data-cursor="view"
         >
           <span className="lis-nav-text">{item.labelEn}</span>
           <span className="lis-nav-dot" aria-hidden="true" />

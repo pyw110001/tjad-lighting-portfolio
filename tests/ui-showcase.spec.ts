@@ -61,3 +61,39 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
     });
   }
 });
+
+test('magnetic cursor stays at mouse position and never jumps to top-left corner on click', async ({ page, isMobile }) => {
+  if (isMobile) return;
+
+  await page.goto('/ui-showcase');
+  await page.waitForTimeout(300);
+
+  // Move to a distinct coordinate (700, 450)
+  await page.mouse.move(700, 450);
+  await page.waitForTimeout(200);
+
+  // Check cursor position while mouse is down (pressed state)
+  await page.mouse.down();
+  await page.waitForTimeout(100);
+
+  const boxDuringClick = await page.locator('.lis-cursor').boundingBox();
+  expect(boxDuringClick).not.toBeNull();
+  if (boxDuringClick) {
+    // Must be near x=700, y=450, NOT at (0, 0)
+    expect(boxDuringClick.x).toBeGreaterThan(650);
+    expect(boxDuringClick.x).toBeLessThan(750);
+    expect(boxDuringClick.y).toBeGreaterThan(400);
+    expect(boxDuringClick.y).toBeLessThan(500);
+  }
+
+  // Release mouse
+  await page.mouse.up();
+  await page.waitForTimeout(100);
+
+  const boxAfterClick = await page.locator('.lis-cursor').boundingBox();
+  expect(boxAfterClick).not.toBeNull();
+  if (boxAfterClick) {
+    expect(boxAfterClick.x).toBeGreaterThan(650);
+    expect(boxAfterClick.x).toBeLessThan(750);
+  }
+});

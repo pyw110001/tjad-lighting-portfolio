@@ -81,7 +81,6 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
                   if (item.previewImage) setHoveredImage(item.previewImage);
                 }}
                 aria-label={item.labelZh}
-                data-cursor="view"
               >
                 <span className="menu-num">/{numStr}</span>
                 <span className="menu-en">{item.labelEn}</span>

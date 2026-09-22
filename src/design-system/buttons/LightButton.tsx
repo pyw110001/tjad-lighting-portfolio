@@ -69,6 +69,23 @@ export const LightButton: React.FC<LightButtonProps> = ({
     </>
   );
 
+  if (href || (to && to.startsWith('#'))) {
+    return (
+      <a
+        ref={btnRef as React.RefObject<HTMLAnchorElement>}
+        href={href || to}
+        className={classes}
+        data-magnetic
+        target={target}
+        rel={rel}
+        aria-label={ariaLabel}
+        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
+      >
+        {content}
+      </a>
+    );
+  }
+
   if (to) {
     return (
       <Link
@@ -81,23 +98,6 @@ export const LightButton: React.FC<LightButtonProps> = ({
       >
         {content}
       </Link>
-    );
-  }
-
-  if (href) {
-    return (
-      <a
-        ref={btnRef as React.RefObject<HTMLAnchorElement>}
-        href={href}
-        className={classes}
-        data-magnetic
-        target={target}
-        rel={rel}
-        aria-label={ariaLabel}
-        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
-      >
-        {content}
-      </a>
     );
   }
 

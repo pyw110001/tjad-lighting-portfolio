@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import './cursor.css';
 
 export interface UnifiedMagneticCursorProps {
@@ -11,10 +12,25 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
   className = '',
 }) => {
   const cursorRef = useRef<HTMLDivElement>(null);
-  const [cursorLabel, setCursorLabel] = useState<string>('');
-  const [cursorState, setCursorState] = useState<'default' | 'hover' | 'view' | 'drag'>('default');
-  const [isPressed, setIsPressed] = useState<boolean>(false);
-  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const { pathname } = useLocation();
+
+  // Reset magnetic target on route navigation
+  const currentMagneticTargetRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (currentMagneticTargetRef.current) {
+      currentMagneticTargetRef.current.style.translate = '';
+      currentMagneticTargetRef.current = null;
+    }
+    if (innerRef.current) {
+      innerRef.current.className = 'lis-cursor-inner state-default';
+    }
+    if (labelRef.current) {
+      labelRef.current.textContent = '';
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -26,75 +42,119 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     let mouseY = -100;
     let currentX = -100;
     let currentY = -100;
+    let hasMoved = false;
     let rafId = 0;
-    let currentMagneticTarget: HTMLElement | null = null;
+    let currentCursorState: 'default' | 'hover' | 'view' | 'drag' = 'default';
+    let currentCursorText = '';
+
+    const updateState = (state: 'default' | 'hover' | 'view' | 'drag', text: string = '') => {
+      if (currentCursorState !== state) {
+        currentCursorState = state;
+        if (innerRef.current) {
+          innerRef.current.className = `lis-cursor-inner state-${state}`;
+        }
+      }
+      if (currentCursorText !== text) {
+        currentCursorText = text;
+        if (labelRef.current) {
+          labelRef.current.textContent = text;
+        }
+      }
+    };
 
     const handlePointerMove = (e: PointerEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
-      setIsVisible(true);
+
+      if (!hasMoved) {
+        currentX = mouseX;
+        currentY = mouseY;
+        hasMoved = true;
+      }
+
+      if (cursorRef.current) {
+        cursorRef.current.classList.add('is-visible');
+      }
 
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
       const cursorTarget = target.closest<HTMLElement>('[data-cursor], [data-cursor-text]');
       const magneticTarget = target.closest<HTMLElement>('[data-magnetic]');
-      const interactiveTarget = target.closest<HTMLElement>('a, button, input, [role="button"], [role="tab"]');
+      const interactiveTarget = target.closest<HTMLElement>('a, button, input, select, [role="button"], [role="tab"], [role="switch"]');
 
-      // Clear previous magnetic target translate if shifted
-      if (currentMagneticTarget && currentMagneticTarget !== magneticTarget) {
-        currentMagneticTarget.style.transform = '';
-        currentMagneticTarget = null;
+      // Clear previous magnetic target translate if shifted to a different target
+      if (currentMagneticTargetRef.current && currentMagneticTargetRef.current !== magneticTarget) {
+        currentMagneticTargetRef.current.style.translate = '';
+        currentMagneticTargetRef.current = null;
       }
 
-      // Handle magnetic pull
+      // Handle magnetic pull using modern CSS translate (avoids overriding CSS transform: scale)
       if (magneticTarget) {
-        currentMagneticTarget = magneticTarget;
+        currentMagneticTargetRef.current = magneticTarget;
         const rect = magneticTarget.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
         const deltaX = (mouseX - centerX) * magneticStrength;
         const deltaY = (mouseY - centerY) * magneticStrength;
-        magneticTarget.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+        magneticTarget.style.translate = `${deltaX}px ${deltaY}px`;
       }
 
-      // Determine state and label
+      // Determine cursor state & label
       if (cursorTarget) {
         const cursorType = cursorTarget.getAttribute('data-cursor');
         const customText = cursorTarget.getAttribute('data-cursor-text');
 
         if (cursorType === 'drag') {
-          setCursorState('drag');
-          setCursorLabel('◀ ▶');
+          updateState('drag', '◀ ▶');
         } else if (cursorType === 'view' || cursorType === '探索作品') {
-          setCursorState('view');
-          setCursorLabel(customText || (cursorType === '探索作品' ? '探索作品' : 'VIEW'));
+          updateState('view', customText || (cursorType === '探索作品' ? '探索作品' : 'VIEW'));
         } else {
-          setCursorState('view');
-          setCursorLabel(cursorType || customText || '');
+          updateState('view', cursorType || customText || '');
         }
       } else if (interactiveTarget) {
-        setCursorState('hover');
-        setCursorLabel('');
+        updateState('hover', '');
       } else {
-        setCursorState('default');
-        setCursorLabel('');
+        updateState('default', '');
       }
     };
 
     const handlePointerLeave = () => {
-      setIsVisible(false);
-      if (currentMagneticTarget) {
-        currentMagneticTarget.style.transform = '';
-        currentMagneticTarget = null;
+      if (cursorRef.current) {
+        cursorRef.current.classList.remove('is-visible');
+      }
+      if (currentMagneticTargetRef.current) {
+        currentMagneticTargetRef.current.style.translate = '';
+        currentMagneticTargetRef.current = null;
+      }
+      updateState('default', '');
+    };
+
+    const handleMouseDown = () => {
+      if (cursorRef.current) {
+        cursorRef.current.classList.add('is-pressed');
       }
     };
 
-    const handleMouseDown = () => setIsPressed(true);
-    const handleMouseUp = () => setIsPressed(false);
+    const handleMouseUp = () => {
+      if (cursorRef.current) {
+        cursorRef.current.classList.remove('is-pressed');
+      }
+    };
+
+    const handleBlur = () => {
+      if (cursorRef.current) {
+        cursorRef.current.classList.remove('is-pressed');
+        cursorRef.current.classList.remove('is-visible');
+      }
+      if (currentMagneticTargetRef.current) {
+        currentMagneticTargetRef.current.style.translate = '';
+        currentMagneticTargetRef.current = null;
+      }
+    };
 
     const loop = () => {
-      // Smooth lerp
+      // Smooth lerp interpolation
       currentX += (mouseX - currentX) * 0.22;
       currentY += (mouseY - currentY) * 0.22;
 
@@ -109,6 +169,7 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     document.addEventListener('pointerleave', handlePointerLeave);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleBlur);
     rafId = requestAnimationFrame(loop);
 
     return () => {
@@ -117,8 +178,9 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
       document.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
-      if (currentMagneticTarget) {
-        currentMagneticTarget.style.transform = '';
+      window.removeEventListener('blur', handleBlur);
+      if (currentMagneticTargetRef.current) {
+        currentMagneticTargetRef.current.style.translate = '';
       }
     };
   }, [magneticStrength]);
@@ -126,12 +188,12 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
   return (
     <div
       ref={cursorRef}
-      className={`lis-cursor state-${cursorState} ${isVisible ? 'is-visible' : ''} ${
-        isPressed ? 'is-pressed' : ''
-      } ${className}`}
+      className={`lis-cursor ${className}`}
       aria-hidden="true"
     >
-      {cursorLabel && <span className="lis-cursor-label">{cursorLabel}</span>}
+      <div ref={innerRef} className="lis-cursor-inner state-default">
+        <span ref={labelRef} className="lis-cursor-label" />
+      </div>
     </div>
   );
 };
