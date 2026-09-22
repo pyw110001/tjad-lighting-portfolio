@@ -2,6 +2,7 @@ import { lazy,Suspense,useEffect,useRef,useState } from 'react';
 import { Link } from 'react-router-dom';
 import { homeProjects,team } from '../content';
 import { ProjectCard,SectionTitle,TextLink,Arrow } from '../components/ui';
+import { LightButton } from '../design-system';
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
   const [pointer, setPointer] = useState({ x: 0.5, y: 0.5 });
@@ -44,14 +45,15 @@ export function Hero() {
           <h2 className="hero-chinese-sub">以光，构筑空间。</h2>
           <p className="hero-tagline-desc">建筑化照明 · 媒体灯光 · 空间体验</p>
           <div className="hero-cta-action">
-            <a
-              className="hero-work-btn"
-              href="#selected"
+            <LightButton
+              to="#selected"
               onClick={scrollToSelected}
-              data-magnetic
+              variant="primary"
+              size="md"
+              aria-label="探索精选作品"
             >
-              EXPLORE OUR WORK <span className="hero-btn-arrow">↗</span>
-            </a>
+              EXPLORE OUR WORK
+            </LightButton>
           </div>
         </div>
 

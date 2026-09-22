@@ -1,0 +1,49 @@
+/* LIGHT INTERFACE SYSTEM — DESIGN TOKENS */
+:root {
+  /* Color Palette */
+  --lis-bg-primary: #080A0E;
+  --lis-bg-secondary: #15191F;
+  --lis-bg-surface: #20252C;
+  --lis-bg-surface-elevated: #282F38;
+
+  --lis-text-primary: #ECEAE4;
+  --lis-text-secondary: #A0A8B2;
+  --lis-text-muted: #6B7280;
+
+  --lis-accent-warm: #C6B58B;
+  --lis-accent-warm-soft: rgba(198, 181, 139, 0.15);
+  --lis-accent-warm-glow: rgba(198, 181, 139, 0.35);
+
+  --lis-accent-cool: #84A9B8;
+  --lis-accent-cool-soft: rgba(132, 169, 184, 0.15);
+  --lis-accent-cool-glow: rgba(132, 169, 184, 0.35);
+
+  --lis-border-subtle: rgba(255, 255, 255, 0.12);
+  --lis-border-focus: rgba(198, 181, 139, 0.5);
+  --lis-border-elevated: rgba(255, 255, 255, 0.18);
+
+  /* Optical Elements */
+  --lis-point-size: 6px;
+  --lis-point-glow: 0 0 8px var(--lis-accent-warm), 0 0 16px rgba(198, 181, 139, 0.6);
+  --lis-point-glow-cool: 0 0 8px var(--lis-accent-cool), 0 0 16px rgba(132, 169, 184, 0.6);
+
+  --lis-beam-gradient: linear-gradient(90deg, transparent 0%, rgba(255, 245, 225, 0.28) 50%, transparent 100%);
+  --lis-beam-edge: linear-gradient(90deg, transparent, var(--lis-accent-warm), transparent);
+
+  --lis-curtain-shutter: #0e1217;
+  --lis-field-gradient: radial-gradient(circle at 50% 0%, rgba(198, 181, 139, 0.08) 0%, transparent 70%);
+
+  /* Motion Tokens */
+  --lis-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --lis-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --lis-t-cursor: 180ms;
+  --lis-t-button: 350ms;
+  --lis-t-selection: 400ms;
+  --lis-t-reveal: 600ms;
+  --lis-t-menu: 600ms;
+  --lis-t-page: 700ms;
+
+  /* Typography */
+  --lis-font-sans: 'Inter', Arial, 'Microsoft YaHei', 'PingFang SC', sans-serif;
+}

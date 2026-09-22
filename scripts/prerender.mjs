@@ -3,7 +3,7 @@ import path from 'node:path';
 import { render } from '../.ssr/entry-server.js';
 const projects=JSON.parse(await fs.readFile('src/content/projects.json','utf8'));
 const template=await fs.readFile('dist/index.html','utf8');
-const routes=['/','/work','/about','/lab','/contact','/404',...projects.map(p=>`/work/${p.slug}`)];
+const routes=['/','/work','/about','/lab','/contact','/ui-showcase','/404',...projects.map(p=>`/work/${p.slug}`)];
 const escape=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
 for (const url of routes) {
   const project = projects.find(p => url === `/work/${p.slug}`);
@@ -13,6 +13,7 @@ for (const url of routes) {
     '/about': '专业与团队',
     '/lab': '光的实验室',
     '/contact': '联系',
+    '/ui-showcase': 'UI 组件库与设计系统',
     '/404': '页面未找到'
   })[url]) + ' — TJAD 建筑照明所';
 

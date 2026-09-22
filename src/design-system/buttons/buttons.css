@@ -1,0 +1,318 @@
+/* LIGHT INTERFACE SYSTEM — BUTTONS */
+
+/* 1. LightButton (Capsule 52px) */
+.lis-light-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  font-family: var(--lis-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.25s var(--lis-ease-smooth),
+              box-shadow 0.35s var(--lis-ease-smooth),
+              background 0.3s ease,
+              border-color 0.3s ease,
+              color 0.3s ease;
+  will-change: transform;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Sizes */
+.lis-light-btn.size-sm {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 11px;
+}
+.lis-light-btn.size-md {
+  height: 52px;
+  padding: 0 28px;
+  font-size: 13px;
+}
+.lis-light-btn.size-lg {
+  height: 60px;
+  padding: 0 36px;
+  font-size: 14px;
+}
+
+/* Variants */
+.lis-light-btn.variant-primary {
+  background: rgba(198, 181, 139, 0.12);
+  color: var(--lis-text-primary);
+  border: 1px solid rgba(198, 181, 139, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.lis-light-btn.variant-primary:hover:not(:disabled) {
+  background: rgba(198, 181, 139, 0.22);
+  border-color: var(--lis-accent-warm);
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(198, 181, 139, 0.3), 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.lis-light-btn.variant-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--lis-text-primary);
+  border: 1px solid var(--lis-border-subtle);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+.lis-light-btn.variant-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.12);
+}
+
+.lis-light-btn.variant-ghost {
+  background: transparent;
+  color: var(--lis-text-secondary);
+  border: 1px solid transparent;
+}
+.lis-light-btn.variant-ghost:hover:not(:disabled) {
+  color: var(--lis-accent-warm);
+  background: rgba(198, 181, 139, 0.06);
+}
+
+/* Active / Pressed state */
+.lis-light-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: 0 0 10px rgba(198, 181, 139, 0.2);
+}
+
+/* Light Beam Sweep across button */
+.lis-btn-beam {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.lis-light-btn:hover:not(:disabled) .lis-btn-beam {
+  opacity: 1;
+  animation: lis-beam-sweep 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes lis-beam-sweep {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Kinetic Typography Reveal */
+.lis-btn-label {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+}
+.lis-btn-label-inner {
+  display: inline-block;
+  transition: transform 0.3s var(--lis-ease-smooth);
+}
+.lis-light-btn:hover:not(:disabled) .lis-btn-label-inner {
+  transform: translateY(-2px);
+}
+
+/* Arrow */
+.lis-btn-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.25s var(--lis-ease-smooth);
+  color: inherit;
+}
+.lis-light-btn:hover:not(:disabled) .lis-btn-arrow {
+  transform: translate(3px, -3px);
+}
+
+/* Disabled state */
+.lis-light-btn:disabled,
+.lis-light-btn.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none !important;
+}
+
+/* Loading state */
+.lis-btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--lis-accent-warm);
+  border-radius: 50%;
+  animation: lis-spin 0.8s linear infinite;
+}
+@keyframes lis-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------- */
+/* 2. OutlineLightButton (Edge Light Beam Border)        */
+/* ---------------------------------------------------- */
+.lis-outline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  padding: 0 26px;
+  height: 48px;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--lis-text-primary);
+  font-family: var(--lis-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  outline: none;
+  border: 1px solid var(--lis-border-subtle);
+  transition: color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+.lis-outline-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(90deg, transparent, var(--lis-accent-warm), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.lis-outline-btn:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: transparent;
+}
+.lis-outline-btn:hover:not(:disabled)::before {
+  opacity: 1;
+  animation: lis-border-track 2.5s linear infinite;
+}
+@keyframes lis-border-track {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.lis-outline-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ---------------------------------------------------- */
+/* 3. TextLightButton (Leading Light Point -> Beam)     */
+/* ---------------------------------------------------- */
+.lis-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  color: var(--lis-text-primary);
+  font-family: var(--lis-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  transition: color 0.25s ease, transform 0.2s ease;
+}
+.lis-text-btn .light-point-lead {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--lis-accent-warm);
+  box-shadow: 0 0 8px var(--lis-accent-warm);
+  transition: width 0.35s var(--lis-ease-smooth),
+              border-radius 0.35s var(--lis-ease-smooth),
+              box-shadow 0.35s var(--lis-ease-smooth);
+}
+.lis-text-btn:hover:not(:disabled) {
+  color: var(--lis-accent-warm);
+  transform: translateX(3px);
+}
+.lis-text-btn:hover:not(:disabled) .light-point-lead {
+  width: 18px;
+  border-radius: 3px;
+  box-shadow: 0 0 12px var(--lis-accent-warm), 0 0 20px rgba(198, 181, 139, 0.4);
+}
+.lis-text-btn .text-arrow {
+  font-size: 15px;
+  transition: transform 0.25s var(--lis-ease-smooth);
+}
+.lis-text-btn:hover:not(:disabled) .text-arrow {
+  transform: translate(3px, -3px);
+}
+
+/* ---------------------------------------------------- */
+/* 4. GlowIconButton (44×44px Min Circular Button)      */
+/* ---------------------------------------------------- */
+.lis-icon-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--lis-border-subtle);
+  color: var(--lis-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  transition: all 0.3s var(--lis-ease-smooth);
+  box-sizing: border-box;
+}
+.lis-icon-btn:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--lis-accent-warm);
+  background: rgba(198, 181, 139, 0.12);
+  box-shadow: 0 0 20px rgba(198, 181, 139, 0.35), 0 0 35px rgba(198, 181, 139, 0.15);
+  transform: scale(1.06);
+}
+.lis-icon-btn.is-active,
+.lis-icon-btn[aria-pressed="true"] {
+  color: var(--lis-accent-warm);
+  border-color: var(--lis-accent-warm);
+  background: rgba(198, 181, 139, 0.18);
+  box-shadow: 0 0 16px rgba(198, 181, 139, 0.3);
+}
+.lis-icon-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.lis-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}

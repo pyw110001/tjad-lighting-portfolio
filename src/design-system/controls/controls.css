@@ -1,0 +1,288 @@
+/* LIGHT INTERFACE SYSTEM — CONTROLS */
+
+/* 1. LightSegmentedControl */
+.lis-segmented-control {
+  display: inline-flex;
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--lis-border-subtle);
+  border-radius: 9999px;
+  padding: 4px;
+  gap: 2px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.lis-segmented-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: rgba(198, 181, 139, 0.22);
+  border: 1px solid rgba(198, 181, 139, 0.45);
+  border-radius: 9999px;
+  box-shadow: 0 0 16px rgba(198, 181, 139, 0.28), 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.35s var(--lis-ease-smooth),
+              width 0.35s var(--lis-ease-smooth);
+  pointer-events: none;
+  z-index: 1;
+}
+.lis-segmented-item {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  color: var(--lis-text-secondary);
+  font-family: var(--lis-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.25s ease;
+  white-space: nowrap;
+}
+.lis-segmented-item:hover {
+  color: var(--lis-text-primary);
+}
+.lis-segmented-item.is-selected {
+  color: #ffffff;
+  font-weight: 600;
+}
+.lis-segmented-item.is-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* 2. LightSlider */
+.lis-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  font-family: var(--lis-font-sans);
+}
+.lis-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lis-text-secondary);
+}
+.lis-slider-badge {
+  color: var(--lis-accent-warm);
+  font-weight: 600;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.lis-slider-track-wrap {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.lis-slider-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: visible;
+}
+.lis-slider-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--lis-accent-warm);
+  box-shadow: 0 0 10px rgba(198, 181, 139, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.lis-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--lis-accent-warm);
+  box-shadow: 0 0 12px rgba(198, 181, 139, 0.8), 0 2px 6px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  pointer-events: none;
+}
+.lis-slider-track-wrap:hover .lis-slider-thumb,
+.lis-slider-track-wrap:active .lis-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 0 18px rgba(198, 181, 139, 1), 0 0 30px rgba(198, 181, 139, 0.5);
+}
+.lis-slider-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 3;
+}
+
+/* 3. TemperatureSlider (2700K - 6500K CCT) */
+.lis-cct-slider-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #ff9329 0%,    /* 2700K Warm Amber */
+    #ffc37a 25%,   /* 3500K Warm White */
+    #ffeacf 50%,   /* 4500K Neutral */
+    #edf4ff 75%,   /* 5500K Pure White */
+    #badcff 100%   /* 6500K Cool Sky */
+  );
+  box-shadow: 0 0 12px rgba(255, 180, 100, 0.2);
+}
+.lis-cct-thumb {
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 14px currentColor, 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+.lis-cct-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* 4. LightPresetCard */
+.lis-preset-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--lis-border-subtle);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s var(--lis-ease-smooth);
+  box-sizing: border-box;
+  text-align: left;
+  outline: none;
+}
+.lis-preset-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(198, 181, 139, 0.35);
+  transform: translateY(-2px);
+}
+.lis-preset-card.is-selected {
+  background: rgba(198, 181, 139, 0.08);
+  border-color: var(--lis-accent-warm);
+  box-shadow: 0 0 24px rgba(198, 181, 139, 0.2), 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+.lis-preset-beam-preview {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  background: #05070a;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.lis-preset-beam-glow {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.lis-preset-card:hover .lis-preset-beam-glow {
+  opacity: 1 !important;
+}
+.lis-preset-card-title {
+  font-family: var(--lis-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--lis-text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lis-preset-card-sub {
+  font-size: 11px;
+  color: var(--lis-text-secondary);
+  line-height: 1.5;
+}
+
+/* 5. LightSwitch */
+.lis-switch-container,
+.lis-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: var(--lis-font-sans);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lis-text-secondary);
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+.lis-switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--lis-border-subtle);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.lis-switch-container.is-checked .lis-switch-track,
+.lis-switch-btn.is-checked .lis-switch-track {
+  background: rgba(198, 181, 139, 0.35);
+  border-color: var(--lis-accent-warm);
+  box-shadow: 0 0 16px rgba(198, 181, 139, 0.3);
+}
+.lis-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s var(--lis-ease-smooth), background 0.25s ease;
+}
+.lis-switch-container.is-checked .lis-switch-thumb,
+.lis-switch-btn.is-checked .lis-switch-thumb {
+  transform: translateX(18px);
+  background: #fff;
+  box-shadow: 0 0 10px var(--lis-accent-warm);
+}
+.lis-switch-container.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

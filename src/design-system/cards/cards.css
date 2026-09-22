@@ -1,0 +1,162 @@
+/* LIGHT INTERFACE SYSTEM — PROJECT CARD & CARD SYSTEMS */
+
+.lis-card {
+  position: relative;
+  border-radius: 12px;
+  background: var(--lis-bg-card);
+  border: 1px solid var(--lis-border-subtle);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s var(--lis-ease-smooth);
+}
+
+.lis-card:hover {
+  border-color: var(--lis-border-glow);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(198, 181, 139, 0.08);
+}
+
+/* Light Beam Sweep on Card Hover */
+.lis-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 48%,
+    rgba(198, 181, 139, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 52%,
+    transparent 60%,
+    transparent 100%
+  );
+  transform: translateX(-150%);
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.lis-card:hover::after {
+  transform: translateX(150%);
+}
+
+/* Image Container */
+.lis-card-media-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #05070a;
+}
+
+.lis-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1);
+  transition: transform 0.7s var(--lis-ease-smooth), opacity 0.5s ease;
+  opacity: 0.88;
+}
+
+.lis-card:hover .lis-card-image {
+  transform: scale(1.04);
+  opacity: 1;
+}
+
+/* Gradient Mask overlay for image */
+.lis-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.85) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Index & Category Badges */
+.lis-card-header-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(8, 10, 14, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--lis-border-subtle);
+  font-family: var(--lis-font-mono);
+  font-size: 11px;
+  color: var(--lis-accent-warm);
+  letter-spacing: 0.08em;
+}
+
+.lis-card-action-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(8, 10, 14, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--lis-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lis-text-secondary);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s ease, transform 0.3s var(--lis-ease-smooth), color 0.3s ease, border-color 0.3s ease;
+}
+
+.lis-card:hover .lis-card-action-icon {
+  opacity: 1;
+  transform: scale(1);
+  color: #ffffff;
+  border-color: var(--lis-accent-warm);
+}
+
+/* Card Content / Caption */
+.lis-card-body {
+  padding: 18px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 3;
+}
+
+.lis-card-title {
+  font-family: var(--lis-font-sans);
+  font-size: clamp(16px, 1.4vw, 20px);
+  font-weight: 500;
+  color: var(--lis-text-primary);
+  margin: 0;
+  line-height: 1.35;
+  transition: color 0.3s ease;
+}
+
+.lis-card:hover .lis-card-title {
+  color: #ffffff;
+}
+
+.lis-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--lis-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.lis-card-meta span {
+  color: var(--lis-text-secondary);
+}
+
+.lis-card-link-wrapper {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}

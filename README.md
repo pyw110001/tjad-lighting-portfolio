@@ -39,15 +39,31 @@
   - 4 步结构化照明设计工作流（自然光评估 → 立面互动 → 昼夜平衡 → 色温定制）。
   - 一键截取当前实验室状态生成照明方案预览卡片。
 
-### 4. 项目档案与全站体验
+### 4. LIGHT INTERFACE SYSTEM 设计系统与全站交互重构
+- **核心理念**：*LIGHT IS THE INTERFACE. 让光成为交互语言。* 沉淀于 `src/design-system/`，为全站提供统一的设计工程规范与微交互动效体系。
+- **四大光学语义元素**：
+  - **LIGHT POINT（光点）**：6-8px 琥珀光晕游标核心与导航指示光点，引导视线焦点。
+  - **LIGHT BEAM（光束）**：胶囊按钮斜向微米扫光、卡片掠光扫描与边缘流光遍历（Edge Traveling Beam）。
+  - **LIGHT CURTAIN（光幕）**：全屏幕布垂直跌落转场与半透遮罩，层叠展示中英大写项目与动态画册缩略图。
+  - **LIGHT FIELD（光场）**：环境微光、暗色奢侈基底（`#080A0E`、`#15191F`、`#20252C`）与冷暖双色温光晕（`#C6B58B` / `#84A9B8`）。
+- **完整组件套件**：
+  - `LightButton`、`OutlineLightButton`、`TextLightButton`、`GlowIconButton`
+  - `LightSegmentedControl`（平滑滑块药丸）、`LightSlider`（发光轨道与发光游标）
+  - `TemperatureSlider`（基于普朗克黑体辐射轨迹的 2700K–6500K CCT 实时计算滑块）
+  - `LightPresetCard`（光束角度模拟）、`LightSwitch`（光学状态切换）
+  - `LightNavbar`（桌面极简滑动光点导航）、`FullscreenMenu`（光幕移动端抽屉）
+  - `LightProjectCard`（掠光投影与卡片微交互）、`UnifiedMagneticCursor`（多态磁吸光学游标）
+- **独立验证展厅（`/ui-showcase`）**：全量展示组件所有状态（Default, Hover, Pressed, Active, Disabled, Loading），支持屏幕阅读器与纯键盘无障碍操控。
+
+### 5. 项目档案与全站体验
 - **29 个完整项目档案**：11 个精选标记、文化艺术/城市景观/商业办公等 7 大分类筛选、实时中英文搜索与 URL 查询参数持久化。
 - **高精度项目详情页**：项目图集、画册 OCR 数据清洗修复、图片大图灯箱查看、下一项目平滑导引。
 - **团队底蕴与学术研究**：团队设计哲学、业务范围、领军人物、2020—2022 年 IES 等重要团队荣誉。
 - **高性能工程化与自动化保障**：
   - 230 张画册原图响应式处理与 WebP 自动压缩。
-  - 35 个路由全部通过 Vite SSR 预渲染（Prerender），支持直接 URL 访问与纯静态部署。
-  - 36 项 Playwright 桌面与移动端 E2E 自动化测试（通过率 100%）。
-  - 单元测试覆盖内容解析与状态管理。
+  - 36 个路由全部通过 Vite SSR 预渲染（Prerender），支持直接 URL 访问与纯静态部署。
+  - 38 项 Playwright 桌面与移动端 E2E 自动化测试（通过率 100%）。
+  - 14 项单元测试覆盖内容解析、动画步进与状态管理（通过率 100%）。
 
 ---
 

@@ -1,12 +1,8 @@
-import { useEffect,useState } from 'react';
-import { Link,NavLink,useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { team } from '../content';
-const nav = [
-  ['/about', 'ABOUT', '专业与团队'],
-  ['/work', 'WORK', '作品'],
-  ['/lab', 'LAB', '光的实验室'],
-  ['/contact', 'CONTACT', '联系']
-] as const;
+import { LightNavbar, FullscreenMenu, DEFAULT_NAV_ITEMS } from '../design-system';
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
@@ -15,11 +11,11 @@ export function Header() {
 
   useEffect(() => {
     if (!open) return;
-    const f = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
     };
-    document.addEventListener('keydown', f);
-    return () => document.removeEventListener('keydown', f);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open]);
 
   useEffect(() => {
@@ -50,15 +46,19 @@ export function Header() {
           {open ? '关闭' : '菜单'}
           <span>{open ? '−' : '+'}</span>
         </button>
-        <nav id="primary-nav" className={open ? 'open' : ''} aria-label="主导航">
-          {nav.map(([to, labelEn, labelZh]) => (
-            <NavLink key={to} to={to} data-magnetic aria-label={labelZh}>
-              <span className="nav-en">{labelEn}</span>
-              <span className="nav-zh">{labelZh}</span>
-            </NavLink>
-          ))}
-        </nav>
+
+        {/* Desktop Light Navbar */}
+        <div className="desktop-nav-wrap">
+          <LightNavbar items={DEFAULT_NAV_ITEMS} />
+        </div>
       </header>
+
+      {/* Fullscreen Curtain Menu (Mobile & Overlay) */}
+      <FullscreenMenu
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        items={DEFAULT_NAV_ITEMS}
+      />
     </>
   );
 }
