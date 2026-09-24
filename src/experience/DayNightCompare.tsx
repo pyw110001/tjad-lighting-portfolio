@@ -15,6 +15,9 @@ const keyframes = [
   { time: 24.0, label: '24:00', title: '深夜节能模式', desc: '关闭高功率立面泛光，保留安全导向与轮廓呼吸微光。' }
 ];
 
+const DAY_IMAGE = '/assets/light-lab/comparisons/century-square-day.webp';
+const NIGHT_IMAGE = '/assets/projects/century-square/01_图-1425.webp';
+
 export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,6 +73,10 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
     0,
     Math.min(1, (state.time - 16.5) / 2.5)
   );
+  const timeLabel = `${String(Math.floor(state.time)).padStart(2, '0')}:${String(
+    Math.round((state.time % 1) * 60)
+  ).padStart(2, '0')}`;
+  const previewPhase = nightAlpha === 0 ? 'Day' : nightAlpha === 1 ? 'Night' : 'Dusk';
 
   return (
     <div className="daynight-compare-module">
@@ -81,18 +88,17 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
           updateSplitFromPointer(e.clientX);
         }}
       >
-        {/* Left Layer: Daytime Visual */}
+        {/* Left Layer: Daytime baseline of the same project */}
         <div className="compare-layer layer-day">
           <img
-            src="/assets/projects/century-square/01_图-1425.webp"
-            alt="建筑日景自然采光"
+            src={DAY_IMAGE}
+            alt="世纪广场白天自然采光"
             className="compare-img"
           />
-          <div className="day-ambient-glaze" />
           <span className="compare-badge badge-day">☀ Day 06:30</span>
         </div>
 
-        {/* Right Layer: Nighttime Visual with clip-path */}
+        {/* Right Layer: time-controlled preview of the same project */}
         <div
           className="compare-layer layer-night"
           style={{
@@ -102,16 +108,23 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
           }}
         >
           <img
-            src="/assets/projects/wanping-theatre/01_图-1455.webp"
-            alt="建筑夜景人工照明"
+            src={DAY_IMAGE}
+            alt=""
             className="compare-img"
           />
-          <div
-            className="night-lighting-sheen"
-            style={{ opacity: 0.35 + nightAlpha * 0.65 }}
+          <img
+            src={NIGHT_IMAGE}
+            alt="世纪广场夜景人工照明"
+            className="compare-img compare-simulated-night"
+            style={{
+              opacity: nightAlpha,
+              filter: state.time >= 22.5 ? 'brightness(0.6)' : undefined
+            }}
           />
-          <span className="compare-badge badge-night">☾ Night 19:30</span>
         </div>
+        <span className="compare-badge badge-night">
+          {previewPhase === 'Day' ? '☀' : '☾'} {previewPhase} {timeLabel}
+        </span>
 
         {/* Split Divider Handle */}
         <div
@@ -169,10 +182,7 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
         <div className="strategy-card">
           <div className="strategy-header">
             <strong>{currentStrategy.title}</strong>
-            <span className="strategy-time">
-              {String(Math.floor(state.time)).padStart(2, '0')}:
-              {String(Math.round((state.time % 1) * 60)).padStart(2, '0')}
-            </span>
+            <span className="strategy-time">{timeLabel}</span>
           </div>
           <p>{currentStrategy.desc}</p>
         </div>

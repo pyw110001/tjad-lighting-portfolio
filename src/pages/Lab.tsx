@@ -21,19 +21,21 @@ import DayNightCompare from '../experience/DayNightCompare';
 import { useActivity, canWebGL } from '../experience/useActivity';
 
 const Scene = lazy(() => import('../experience/LightScene'));
+const FluidLightCanvas = lazy(() => import('../experience/fluid/FluidLightCanvas'));
 
 const modules: { id: LabModuleId; num: string; en: string; zh: string }[] = [
   { id: 'field', num: '01', en: 'Light Field', zh: '实时光场' },
   { id: 'pixel', num: '02', en: 'Pixel Facade', zh: '像素立面' },
   { id: 'day', num: '03', en: 'Day / Night', zh: '昼夜切换' },
-  { id: 'color', num: '04', en: 'Color Studio', zh: '光色实验室' }
+  { id: 'color', num: '04', en: 'Color Studio', zh: '光色实验室' },
+  { id: 'wave', num: '05', en: 'Fluid Light', zh: '流光粒子' }
 ];
 
 export default function Lab() {
   const [params, setParams] = useSearchParams();
   const rawMode = params.get('mode');
   const activeMode: LabModuleId =
-    rawMode === 'pixel' || rawMode === 'day' || rawMode === 'color'
+    rawMode === 'pixel' || rawMode === 'day' || rawMode === 'color' || rawMode === 'wave'
       ? rawMode
       : 'field';
 
@@ -42,6 +44,7 @@ export default function Lab() {
     activeModule: activeMode
   });
 
+  const waveResetRef = useRef<(() => void) | null>(null);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [reduced, setReduced] = useState(false);
   const [copiedNote, setCopiedNote] = useState(false);
@@ -531,6 +534,49 @@ export default function Lab() {
               <li>• 预设不同场景（展厅 / 办公 / 公共空间）</li>
               <li>• 观察空间氛围变化</li>
               <li>• 支持导出对比图</li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Module 05: FLUID LIGHT / 流光粒子 */}
+        <section id="lab-wave" className="lab-card card-wave">
+          <div className="card-header">
+            <div className="card-titles">
+              <h2>
+                <span className="card-num">05</span> FLUID LIGHT{' '}
+                <small>流光粒子</small>
+              </h2>
+              <p>基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。</p>
+            </div>
+            <button
+              type="button"
+              className="lab-reset-btn"
+              onClick={() => {
+                waveResetRef.current?.();
+                dispatch({ type: 'RESET_WAVE' });
+              }}
+              title="重置流光粒子参数"
+            >
+              Reset ↺
+            </button>
+          </div>
+
+          <Suspense fallback={<div className="lab-loading">加载 WebGPU 流光引擎...</div>}>
+            <FluidLightCanvas
+              initialPalette={state.fluidLight.palette}
+              onResetRequested={fn => {
+                waveResetRef.current = fn;
+              }}
+            />
+          </Suspense>
+
+          <div className="card-features">
+            <h4>功能亮点：</h4>
+            <ul>
+              <li>• WebGPU GPU Compute 并行计算 3,000+ 流光微粒动力学</li>
+              <li>• 鼠标光标漫游向心吸附，右键释放推散光浪</li>
+              <li>• MediaPipe AI 隔空手势感知：食指导引流光、捏合手势推散冲击波</li>
+              <li>• 4 组建筑级色温调色板（暖金 3000K / 极光冷白 6000K / 双色温 / 日光白）</li>
             </ul>
           </div>
         </section>

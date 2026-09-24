@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('LIGHT LAB Redesign - 4-Module Interactive Architecture', () => {
-  test('renders top celestial hero, all 4 experiment cards, and user guide', async ({
+test.describe('LIGHT LAB Redesign - 5-Module Interactive Architecture', () => {
+  test('renders top celestial hero, all 5 experiment cards, and user guide', async ({
     page
   }) => {
     const consoleErrors: string[] = [];
@@ -17,15 +17,16 @@ test.describe('LIGHT LAB Redesign - 4-Module Interactive Architecture', () => {
     await expect(page.locator('.lab-main-title')).toContainText('LIGHT LAB');
     await expect(page.locator('.sun-disc-handle')).toBeVisible();
 
-    // 4 Navigation Anchor Items
+    // 5 Navigation Anchor Items
     const navItems = page.locator('.arc-nav-item');
-    await expect(navItems).toHaveCount(4);
+    await expect(navItems).toHaveCount(5);
 
-    // All 4 Experiment Cards
+    // All 5 Experiment Cards
     await expect(page.locator('#lab-field')).toBeVisible();
     await expect(page.locator('#lab-pixel')).toBeVisible();
     await expect(page.locator('#lab-day')).toBeVisible();
     await expect(page.locator('#lab-color')).toBeVisible();
+    await expect(page.locator('#lab-wave')).toBeVisible();
 
     // Bottom User Guide
     await expect(page.locator('.card-guide')).toBeVisible();
@@ -90,13 +91,26 @@ test.describe('LIGHT LAB Redesign - 4-Module Interactive Architecture', () => {
   });
 
   test('03 DAY / NIGHT: interactive split slider and time scrubbing strategy', async ({
-    page
+    page,
+    isMobile
   }) => {
     await page.goto('/lab', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
 
     const dayCard = page.locator('#lab-day');
     await dayCard.scrollIntoViewIfNeeded();
+
+    await expect(dayCard.locator('.layer-day img')).toHaveAttribute(
+      'src',
+      '/assets/light-lab/comparisons/century-square-day.webp'
+    );
+    await expect(dayCard.locator('.compare-simulated-night')).toHaveAttribute(
+      'src',
+      '/assets/projects/century-square/01_图-1425.webp'
+    );
+    if (isMobile) {
+      expect((await dayCard.locator('.compare-stage').boundingBox())?.height).toBeGreaterThan(180);
+    }
 
     // Check badges
     await expect(dayCard.locator('.badge-day')).toContainText('06:30');
@@ -106,11 +120,14 @@ test.describe('LIGHT LAB Redesign - 4-Module Interactive Architecture', () => {
     const tick24 = dayCard.locator('.timeline-tick', { hasText: '24:00' });
     await tick24.click();
     await expect(dayCard.locator('.strategy-card strong')).toContainText('深夜节能模式');
+    await expect(dayCard.locator('.compare-simulated-night')).toHaveCSS('opacity', '1');
 
     // Click 12:00
     const tick12 = dayCard.locator('.timeline-tick', { hasText: '12:00' });
     await tick12.click();
     await expect(dayCard.locator('.strategy-card strong')).toContainText('正午顶光抑制');
+    await expect(dayCard.locator('.compare-simulated-night')).toHaveCSS('opacity', '0');
+    await expect(dayCard.locator('.badge-night')).toContainText('Day 12:00');
   });
 
   test('04 COLOR STUDIO: 4 spatial lighting presets switch active state', async ({

@@ -88,7 +88,7 @@ test('404 and reduced-motion rendering stay usable', async ({ page }) => {
   await expect(page.getByRole('link', { name: '返回首页' })).toBeVisible();
 });
 
-test('visual capture: hero page layout and portal card', async ({ page, isMobile }) => {
+test('visual capture: hero page layout and portal card', async ({ page, isMobile }, testInfo) => {
   await page.goto('/');
   const skipBtn = page.getByRole('button', { name: /跳过开场/ });
   if (await skipBtn.isVisible()) {
@@ -102,7 +102,7 @@ test('visual capture: hero page layout and portal card', async ({ page, isMobile
 
   const prefix = isMobile ? 'hero-mobile' : 'hero-desktop';
   await page.screenshot({
-    path: `C:/Users/123/.gemini/antigravity/brain/715b839f-3cf2-499a-b4c0-0d60e82753c8/${prefix}.png`
+    path: testInfo.outputPath(`${prefix}.png`)
   });
 });
 

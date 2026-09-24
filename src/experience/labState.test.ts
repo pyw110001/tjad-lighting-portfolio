@@ -77,5 +77,20 @@ describe('Light Lab Physical Algorithms', () => {
     expect(state.dayNight.keyframe).toBe('sunset');
     state = fullLabReducer(state, { type: 'DAYNIGHT_SET_TIME', value: 20 });
     expect(state.dayNight.keyframe).toBe('night');
+
+    // Fluid Light (Wave) actions
+    state = fullLabReducer(state, { type: 'SET_MODULE', value: 'wave' });
+    expect(state.activeModule).toBe('wave');
+    state = fullLabReducer(state, { type: 'WAVE_SET_PALETTE', value: 'cool6000' });
+    expect(state.fluidLight.palette).toBe('cool6000');
+    state = fullLabReducer(state, { type: 'WAVE_SET_MODE', value: 'gesture' });
+    expect(state.fluidLight.inputMode).toBe('gesture');
+    state = fullLabReducer(state, { type: 'WAVE_SET_GRAVITY', value: -5 });
+    expect(state.fluidLight.gravity).toBe(-5);
+    state = fullLabReducer(state, { type: 'WAVE_TOGGLE_PAUSE' });
+    expect(state.fluidLight.paused).toBe(true);
+    state = fullLabReducer(state, { type: 'RESET_WAVE' });
+    expect(state.fluidLight.palette).toBe('warm3000');
+    expect(state.fluidLight.paused).toBe(false);
   });
 });

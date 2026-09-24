@@ -17,7 +17,7 @@ for (const url of routes) {
     '/404': '页面未找到'
   })[url]) + ' — TJAD 建筑照明所';
 
-  const appHtml = render(url);
+  const appHtml = await render(url);
   let html = template
     .replace('<div id="root"><!--app-html--></div>', `<div id="root" data-prerender-url="${url}">${appHtml}</div>`)
     .replace('<!--app-html-->', appHtml)

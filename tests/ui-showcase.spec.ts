@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
 
-const ARTIFACTS_DIR = 'C:/Users/123/.gemini/antigravity/brain/715b839f-3cf2-499a-b4c0-0d60e82753c8';
-
-test('UI showcase renders and handles all interactive states', async ({ page, isMobile }) => {
+test('UI showcase renders and handles all interactive states', async ({ page, isMobile }, testInfo) => {
   await page.goto('/ui-showcase', { waitUntil: 'networkidle' });
   await page.waitForTimeout(500);
 
@@ -37,7 +34,7 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
   // Capture Screenshot
   if (!isMobile) {
     await page.screenshot({
-      path: path.join(ARTIFACTS_DIR, 'ui-showcase-desktop.png'),
+      path: testInfo.outputPath('ui-showcase-desktop.png'),
       fullPage: true,
     });
 
@@ -48,7 +45,7 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
     await expect(page.getByRole('dialog', { name: '全屏导航菜单' })).toBeVisible();
 
     await page.screenshot({
-      path: path.join(ARTIFACTS_DIR, 'ui-showcase-curtain.png'),
+      path: testInfo.outputPath('ui-showcase-curtain.png'),
     });
 
     // Close menu with Esc
@@ -56,7 +53,7 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
     await page.waitForTimeout(400);
   } else {
     await page.screenshot({
-      path: path.join(ARTIFACTS_DIR, 'ui-showcase-mobile.png'),
+      path: testInfo.outputPath('ui-showcase-mobile.png'),
       fullPage: true,
     });
   }
