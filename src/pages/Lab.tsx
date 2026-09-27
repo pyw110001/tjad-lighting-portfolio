@@ -45,6 +45,8 @@ export default function Lab() {
   });
 
   const waveResetRef = useRef<(() => void) | null>(null);
+  const waveSectionRef = useRef<HTMLElement>(null);
+  const [waveReady, setWaveReady] = useState(false);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [reduced, setReduced] = useState(false);
   const [copiedNote, setCopiedNote] = useState(false);
@@ -61,6 +63,22 @@ export default function Lab() {
     setSupported(canWebGL());
     setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
+
+  useEffect(() => {
+    const section = waveSectionRef.current;
+    if (!section || waveReady) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) {
+          setWaveReady(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [waveReady]);
 
   const switchModule = useCallback(
     (id: LabModuleId) => {
@@ -204,7 +222,7 @@ export default function Lab() {
                 <span className="card-num">01</span> LIGHT FIELD{' '}
                 <small>实时光场</small>
               </h2>
-              <p>通过调整光源参数，观察建筑空间在不同光照条件下的变化。</p>
+              <p>调整光源参数，或移动指针在立面上探索局部光束。</p>
             </div>
             <button
               type="button"
@@ -323,6 +341,7 @@ export default function Lab() {
               <li>• 调整光源强度、色温、方向</li>
               <li>• 支持不同建筑模型（简约模型 / 场馆 / 街区）</li>
               <li>• 实时渲染光影与材质反射</li>
+              <li>• 移动指针，观察局部光束如何改变立面明暗</li>
             </ul>
           </div>
         </section>
@@ -539,7 +558,7 @@ export default function Lab() {
         </section>
 
         {/* Module 05: FLUID LIGHT / 流光粒子 */}
-        <section id="lab-wave" className="lab-card card-wave">
+        <section id="lab-wave" className="lab-card card-wave" ref={waveSectionRef}>
           <div className="card-header">
             <div className="card-titles">
               <h2>
@@ -561,14 +580,20 @@ export default function Lab() {
             </button>
           </div>
 
-          <Suspense fallback={<div className="lab-loading">加载 WebGPU 流光引擎...</div>}>
-            <FluidLightCanvas
-              initialPalette={state.fluidLight.palette}
-              onResetRequested={fn => {
-                waveResetRef.current = fn;
-              }}
-            />
-          </Suspense>
+          {waveReady ? (
+            <Suspense fallback={<div className="card-viewport-wrap lab-loading">加载 WebGPU 流光引擎...</div>}>
+              <FluidLightCanvas
+                initialPalette={state.fluidLight.palette}
+                onResetRequested={fn => {
+                  waveResetRef.current = fn;
+                }}
+              />
+            </Suspense>
+          ) : (
+            <div className="card-viewport-wrap">
+              <img className="lab-poster" src="/assets/brand/lab.webp" alt="流光粒子静态预览" loading="lazy" />
+            </div>
+          )}
 
           <div className="card-features">
             <h4>功能亮点：</h4>

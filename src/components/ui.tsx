@@ -39,17 +39,25 @@ export function TextLink({
 export function SectionTitle({
   english,
   chinese,
-  children
+  children,
+  masked = false
 }: {
   english: string;
   chinese: string;
   children?: ReactNode;
+  masked?: boolean;
 }) {
   return (
     <div className="section-title">
-      <h2 data-reveal>
-        {english}
-        <span>{chinese}</span>
+      <h2 data-reveal={masked ? undefined : ''} data-line-reveal={masked ? '' : undefined}>
+        {masked ? (
+          <>
+            <span className="title-mask-line"><span className="title-mask-content">{english}</span></span>
+            <span className="title-mask-line title-mask-zh"><span className="title-mask-content">{chinese}</span></span>
+          </>
+        ) : (
+          <>{english}<span>{chinese}</span></>
+        )}
       </h2>
       {children}
     </div>
@@ -230,14 +238,32 @@ export function ProjectCard({
         </Link>
       )}
       <div className="project-caption">
-        <Link to={`/work/${project.slug}`}>
-          <h3>{project.name}</h3>
-        </Link>
         <p>
           {project.categories.join(' · ')}
           <span> / </span>
           {project.city}
         </p>
+        <Link to={`/work/${project.slug}`} className="project-title-link">
+          <span className="project-title-arrow" aria-hidden="true">
+            <svg viewBox="0 0 44 24" fill="none" focusable="false">
+              <path d="M1 12H41M30 1L41 12L30 23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <h3 aria-label={project.name}>
+            {parallax ? (
+              <span className="project-title-letters" aria-hidden="true">
+                {Array.from(project.name).map((letter, letterIndex) => (
+                  <span className="project-title-letter" key={`${letterIndex}-${letter}`}>
+                    <span className="project-title-letter-track" style={{ transitionDelay: `${letterIndex * 24}ms` }}>
+                      <span>{letter === ' ' ? '\u00a0' : letter}</span>
+                      <span>{letter === ' ' ? '\u00a0' : letter}</span>
+                    </span>
+                  </span>
+                ))}
+              </span>
+            ) : project.name}
+          </h3>
+        </Link>
         <small>{project.cover.kind}</small>
       </div>
     </article>

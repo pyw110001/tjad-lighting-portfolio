@@ -27,6 +27,15 @@ export function PageEffects() {
             scrollTrigger: { trigger: el, start: 'top 95%', once: true }
           });
         });
+        document.querySelectorAll('[data-line-reveal]').forEach(el => {
+          gsap.from(el.querySelectorAll('.title-mask-content'), {
+            yPercent: 110,
+            duration: 0.9,
+            stagger: 0.09,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 90%', once: true }
+          });
+        });
         if (!first.current && shutters.current) {
           gsap.fromTo(
             shutters.current.children,
@@ -129,7 +138,7 @@ export function Intro() {
     const start = performance.now();
     let raf = 0;
     const frame = (t: number) => {
-      const progress = Math.min(1, (t - start) / 1100),
+      const progress = Math.min(1, (t - start) / 850),
         e = 1 - Math.pow(1 - progress, 3);
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = '#c6b58b';
@@ -138,12 +147,33 @@ export function Intro() {
         ctx.arc(p.sx + (p.x - p.sx) * e, p.sy + (p.y - p.sy) * e, 1.1, 0, Math.PI * 2);
         ctx.fill();
       }
-      raf = requestAnimationFrame(frame);
+      if (progress < 1) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    const timeout = setTimeout(() => setVisible(false), 1800);
+    let imageReady = false;
+    let minimumElapsed = false;
+    let cancelled = false;
+    const finishIfReady = () => {
+      if (!cancelled && imageReady && minimumElapsed) setVisible(false);
+    };
+    const heroImage = document.querySelector<HTMLImageElement>('.hero-portal-img');
+    if (heroImage?.decode) {
+      heroImage.decode().catch(() => {}).finally(() => {
+        imageReady = true;
+        finishIfReady();
+      });
+    } else {
+      imageReady = true;
+    }
+    const minimum = setTimeout(() => {
+      minimumElapsed = true;
+      finishIfReady();
+    }, 700);
+    const maximum = setTimeout(() => setVisible(false), 1300);
     return () => {
-      clearTimeout(timeout);
+      cancelled = true;
+      clearTimeout(minimum);
+      clearTimeout(maximum);
       cancelAnimationFrame(raf);
     };
   }, [visible]);

@@ -149,6 +149,7 @@ export class WebGPUFluidEngine {
   private lastTime = 0;
   private frameCount = 0;
   private lastFpsTime = 0;
+  private destroyed = false;
 
   constructor(initialConfig: Partial<FluidEngineConfig> = {}) {
     this.config = { ...DEFAULT_FLUID_CONFIG, ...initialConfig };
@@ -165,23 +166,29 @@ export class WebGPUFluidEngine {
 
     this.canvas = canvas;
     this.adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+    if (this.destroyed) return;
     if (!this.adapter) {
       throw new Error('Failed to acquire WebGPU adapter');
     }
 
-    this.device = await this.adapter.requestDevice({
+    const device = await this.adapter.requestDevice({
       requiredLimits: {
         maxStorageBufferBindingSize: this.adapter.limits.maxStorageBufferBindingSize,
         maxComputeWorkgroupsPerDimension: this.adapter.limits.maxComputeWorkgroupsPerDimension
       }
     });
+    if (this.destroyed) {
+      device.destroy();
+      return;
+    }
+    this.device = device;
 
     this.device.addEventListener('uncapturederror', (event: any) => {
       console.warn('[WebGPU Uncaptured Error]:', event.error?.message || event.error);
     });
 
     this.device.lost.then(info => {
-      console.warn('WebGPU device was lost:', info.message);
+      if (!this.destroyed) console.warn('WebGPU device was lost:', info.message);
       this.stop();
     });
 
@@ -203,12 +210,6 @@ export class WebGPUFluidEngine {
     this.createBindGroups();
     this.uploadGradientLUT(this.config.palette);
     this.resetSimulation();
-    console.warn('[Fluid Init Done]', {
-      particleCount: this.particleCount,
-      canvasW: this.canvas.width,
-      canvasH: this.canvas.height,
-      bounds: this.bounds
-    });
   }
 
   public start(): void {
@@ -335,6 +336,7 @@ export class WebGPUFluidEngine {
   }
 
   public destroy(): void {
+    this.destroyed = true;
     this.stop();
     const bufs = [
       this.positionsBuffer, this.predictedBuffer, this.velocitiesBuffer, this.densitiesBuffer,
@@ -344,6 +346,8 @@ export class WebGPUFluidEngine {
     ];
     bufs.forEach(b => b?.destroy());
     this.lineVertexBuffer?.destroy();
+    this.ctx?.unconfigure();
+    this.device?.destroy();
     this.device = null;
     this.ctx = null;
   }
@@ -1203,14 +1207,6 @@ export class WebGPUFluidEngine {
 
     // Calculate FPS
     this.frameCount++;
-    if (this.frameCount === 1) {
-      console.warn('[Fluid RenderFrame #1]', {
-        particleCount: this.particleCount,
-        bounds: this.bounds,
-        canvasW: this.canvas?.width,
-        canvasH: this.canvas?.height
-      });
-    }
     if (now - this.lastFpsTime >= 1000) {
       this.fps = this.frameCount;
       this.frameCount = 0;

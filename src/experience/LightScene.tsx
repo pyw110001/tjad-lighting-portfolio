@@ -9,6 +9,7 @@ import {
   CanvasTexture,
   RepeatWrapping,
   ShaderMaterial,
+  PointLight,
   Vector3
 } from 'three';
 import type { FullLabState } from './labState';
@@ -57,7 +58,55 @@ function useProceduralConcrete() {
  * Colonnaded architectural courtyard with high clerestory light well,
  * cantilevered concrete beams, water terrace, and sunlight/artificial light washes.
  */
-function LightFieldArchitecture({ state }: { state: FullLabState }) {
+function PointerWallWash() {
+  const light = useRef<PointLight>(null);
+  const target = useRef(new Vector3(0, 3.4, -1.6));
+  const targetIntensity = useRef(0);
+  const { gl, invalidate } = useThree();
+
+  useEffect(() => {
+    const leave = () => {
+      targetIntensity.current = 0;
+      invalidate();
+    };
+    gl.domElement.addEventListener('pointerleave', leave);
+    return () => gl.domElement.removeEventListener('pointerleave', leave);
+  }, [gl, invalidate]);
+
+  useFrame(() => {
+    const current = light.current;
+    if (!current) return;
+    current.position.lerp(target.current, 0.16);
+    current.intensity += (targetIntensity.current - current.intensity) * 0.16;
+    if (current.position.distanceToSquared(target.current) > 0.002 ||
+        Math.abs(current.intensity - targetIntensity.current) > 0.02) {
+      invalidate();
+    }
+  });
+
+  return (
+    <>
+      <pointLight ref={light} color="#f1d7aa" intensity={0} distance={5.5} decay={2} />
+      <mesh
+        position={[0, 3.4, -2.89]}
+        onPointerMove={event => {
+          target.current.set(event.point.x, event.point.y, -1.6);
+          targetIntensity.current = 9;
+          invalidate();
+        }}
+        onPointerOut={() => {
+          targetIntensity.current = 0;
+          invalidate();
+        }}
+      >
+        <planeGeometry args={[14, 7.2]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+      </mesh>
+    </>
+  );
+}
+
+function LightFieldArchitecture({ state, reduced }: { state: FullLabState; reduced: boolean }) {
   const concreteTexture = useProceduralConcrete();
   const lf = state.lightField;
 
@@ -133,6 +182,8 @@ function LightFieldArchitecture({ state }: { state: FullLabState }) {
         penumbra={0.7}
         distance={22}
       />
+
+      {!reduced && <PointerWallWash />}
 
       {/* Architectural Space Geometry */}
       <group position={[0, 0, 0]}>
@@ -576,7 +627,7 @@ export default function LightScene({
         <fog attach="fog" args={['#0a0d11', 20, 60]} />
         <CameraController mode={mode} />
 
-        {mode === 'field' && <LightFieldArchitecture state={state} />}
+        {mode === 'field' && <LightFieldArchitecture state={state} reduced={reduced} />}
         {mode === 'pixel' && (
           <PixelFacadeArchitecture state={state} reduced={reduced} />
         )}

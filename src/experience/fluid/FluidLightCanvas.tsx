@@ -15,6 +15,7 @@ export default function FluidLightCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WebGPUFluidEngine | null>(null);
+  const syncActivityRef = useRef<(() => void) | null>(null);
 
   const [supported, setSupported] = useState<boolean | null>(null);
   const [inputMode, setInputMode] = useState<'mouse' | 'gesture'>('mouse');
@@ -65,15 +66,43 @@ export default function FluidLightCanvas({
     engineRef.current = engine;
 
     let mounted = true;
+    let initialized = false;
+    let inView = false;
+    let disposed = false;
+    const dispose = () => {
+      if (disposed) return;
+      disposed = true;
+      engine.destroy();
+    };
+    const syncActivity = () => {
+      if (!mounted || !initialized) return;
+      const rendering = inView && !document.hidden && !engine.isPaused;
+      if (rendering) engine.start();
+      else engine.stop();
+      if (container) container.dataset.rendering = String(rendering);
+    };
+    syncActivityRef.current = syncActivity;
+    const observer = new IntersectionObserver(entries => {
+      inView = Boolean(entries[0]?.isIntersecting);
+      if (!inView) engine.setPointer(0, 0, false);
+      syncActivity();
+    }, { threshold: 0.01 });
+    observer.observe(container ?? canvas);
+    document.addEventListener('visibilitychange', syncActivity);
+
     engine
       .init(canvas)
       .then(() => {
         if (!mounted) return;
-        engine.start();
+        initialized = true;
+        syncActivity();
       })
       .catch(err => {
-        console.warn('WebGPU fluid initialization failed:', err);
-        if (mounted) setSupported(false);
+        if (mounted) {
+          console.warn('WebGPU fluid initialization failed:', err);
+          dispose();
+          setSupported(false);
+        }
       });
 
     // Provide reset handler to parent
@@ -89,8 +118,11 @@ export default function FluidLightCanvas({
 
     return () => {
       mounted = false;
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncActivity);
+      syncActivityRef.current = null;
       clearInterval(interval);
-      engine.destroy();
+      dispose();
       engineRef.current = null;
     };
   }, []);
@@ -186,6 +218,11 @@ export default function FluidLightCanvas({
     if (!engineRef.current) return;
     const paused = engineRef.current.togglePause();
     setIsPaused(paused);
+    if (paused) {
+      engineRef.current.stop();
+      if (containerRef.current) containerRef.current.dataset.rendering = 'false';
+    }
+    else syncActivityRef.current?.();
   };
 
   // Gravity change

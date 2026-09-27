@@ -47,6 +47,25 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     let currentCursorState: 'default' | 'hover' | 'view' | 'drag' = 'default';
     let currentCursorText = '';
 
+    const loop = () => {
+      rafId = 0;
+      currentX += (mouseX - currentX) * 0.22;
+      currentY += (mouseY - currentY) * 0.22;
+      if (Math.abs(mouseX - currentX) < 0.1) currentX = mouseX;
+      if (Math.abs(mouseY - currentY) < 0.1) currentY = mouseY;
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      }
+      if (currentX !== mouseX || currentY !== mouseY) rafId = requestAnimationFrame(loop);
+    };
+    const wake = () => {
+      if (!rafId && !document.hidden) rafId = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+    };
+
     const updateState = (state: 'default' | 'hover' | 'view' | 'drag', text: string = '') => {
       if (currentCursorState !== state) {
         currentCursorState = state;
@@ -71,6 +90,7 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
         currentY = mouseY;
         hasMoved = true;
       }
+      wake();
 
       if (cursorRef.current) {
         cursorRef.current.classList.add('is-visible');
@@ -80,7 +100,10 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
       if (!target) return;
 
       const cursorTarget = target.closest<HTMLElement>('[data-cursor], [data-cursor-text]');
-      const magneticTarget = target.closest<HTMLElement>('[data-magnetic]');
+      const magneticCandidate = target.closest<HTMLElement>('[data-magnetic]');
+      const magneticTarget = magneticCandidate?.closest('.hero-cta-action, .project-card .project-caption, .contact-teaser')
+        ? magneticCandidate
+        : null;
       const interactiveTarget = target.closest<HTMLElement>('a, button, input, select, [role="button"], [role="tab"], [role="switch"]');
 
       // Clear previous magnetic target translate if shifted to a different target
@@ -120,6 +143,8 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     };
 
     const handlePointerLeave = () => {
+      stop();
+      hasMoved = false;
       if (cursorRef.current) {
         cursorRef.current.classList.remove('is-visible');
       }
@@ -143,6 +168,8 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     };
 
     const handleBlur = () => {
+      stop();
+      hasMoved = false;
       if (cursorRef.current) {
         cursorRef.current.classList.remove('is-pressed');
         cursorRef.current.classList.remove('is-visible');
@@ -153,16 +180,8 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
       }
     };
 
-    const loop = () => {
-      // Smooth lerp interpolation
-      currentX += (mouseX - currentX) * 0.22;
-      currentY += (mouseY - currentY) * 0.22;
-
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-      }
-
-      rafId = requestAnimationFrame(loop);
+    const handleVisibilityChange = () => {
+      if (document.hidden) handleBlur();
     };
 
     document.addEventListener('pointermove', handlePointerMove, { passive: true });
@@ -170,15 +189,16 @@ export const UnifiedMagneticCursor: React.FC<UnifiedMagneticCursorProps> = ({
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('blur', handleBlur);
-    rafId = requestAnimationFrame(loop);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      stop();
       document.removeEventListener('pointermove', handlePointerMove);
       document.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (currentMagneticTargetRef.current) {
         currentMagneticTargetRef.current.style.translate = '';
       }

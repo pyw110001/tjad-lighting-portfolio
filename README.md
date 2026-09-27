@@ -12,11 +12,13 @@
 - **建筑光影高清重绘（AI HD Redrawn）**：基于安藤忠雄式清水混凝土光影回廊，呈现高精度对拉螺栓孔、模板肌理、垂直极简光缝（Warm Gold Light Slit）、阶梯漫反射及湿石镜面光泽（`hero-portal.webp`，896×1200，WebP 仅 58KB）。
 - **极简双栏海报构图**：左侧现代高对比度排版（`LIGHT GIVES FORM.` + `以光，构筑空间。`），右侧 22px 典雅大圆角建筑光廊卡片。
 - **MOVE TO ILLUMINATE 动态交互**：光标在首屏漫游时，暖金光晕（`hero-portal-glare`）在拱廊与地面动态流动，底部呼吸指示灯即时响应。
+- **Hero → Selected Work 金色粒子轨迹**：桌面端使用轻量 WebGL 粒子与 GSAP ScrollTrigger。从页面顶部开始向下滚动时，粒子自左上角渐次出现，穿过 Hero 并在「精选作品」标题后方回环延伸；向上滚动时反向收回，回到顶部后完全消失。离屏或切换后台时暂停绘制，减少动态效果设置下隐藏该装饰。
 - **顶部极简双语导航**：金色品牌名 `TJAD / ARCHITECTURAL LIGHTING`，大写导航 `ABOUT` / `WORK` / `LAB` / `CONTACT`，移动端无缝支持中英双语。
 
 ### 2. 精选作品 3D 视差海报（3D Parallax Poster）
 - **多层深度微视差**：鼠标移动或触控拖拽时，海报前景标签、后景建筑、悬浮角标产生多层景深位移与平滑回弹。
 - **动态光斑漫射（Dynamic Glare）**：光标掠过卡片时动态投射光照高光，增强实体画册般的触感。
+- **项目标题交互**：悬停或键盘聚焦作品入口时，暖金箭头展开，标题字母逐个翻动；精选作品与部分章节标题采用逐行遮罩显现。
 - **全方位无障碍与降级**：支持键盘方向键精确操控视差、`Escape` 键一键复位，在 `prefers-reduced-motion` 模式下自动平滑降级。
 
 ### 3. LIGHT LAB 光的实验室（5 大交互模块）
@@ -24,6 +26,7 @@
 - **01 LIGHT FIELD（光场模拟）**：
   - 支持 24h 日照滑块、方位角罗盘手柄与照度（Lux）动态计算。
   - 支持“自然光 / 人工光”一键切换与参数复位。
+  - 在实时光场中移动指针，可观察局部暖光对建筑立面明暗的影响。
 - **02 PIXEL FACADE（像素立面）**：
   - 基于 Procedural GPU Fragment Shader 实现建筑外立面 LED 点阵媒体屏。
   - 真实模拟发光二极管（LED Diode）微内核、柔光光晕（Bloom Halo）与发光网格。
@@ -38,6 +41,7 @@
 - **05 FLUID LIGHT（流光粒子）**：
   - WebGPU 粒子模拟支持鼠标吸附、推散、色温切换与参数调节；不支持 WebGPU 时显示静态预览。
   - 可选摄像头手势控制，使用 MediaPipe 识别食指与捏合动作。
+  - 接近模块视口时才初始化引擎，离屏及页面处于后台时暂停渲染。
 - **光环境设计指引与一键方案导出（Lighting User Guide & Export）**：
   - 4 步结构化照明设计工作流（自然光评估 → 立面互动 → 昼夜平衡 → 色温定制）。
   - 一键截取当前实验室状态生成照明方案预览卡片。
@@ -65,14 +69,14 @@
 - **高性能工程化与自动化保障**：
   - 230 张画册原图响应式处理与 WebP 自动压缩。
   - 36 个路由全部通过 Vite SSR 预渲染（Prerender），支持直接 URL 访问与纯静态部署。
-  - 42 项 Playwright 桌面与移动端 E2E 自动化测试（通过率 100%）。
+  - 50 项 Playwright 桌面与移动端 E2E 自动化测试（全部通过）。
   - 14 项单元测试覆盖内容解析、动画步进与状态管理（通过率 100%）。
 
 ---
 
 ## 本地运行
 
-需要 Node.js 24，或 Node.js 22.12+ 的 22.x 版本；浏览器端自动化测试使用系统安装的 Google Chrome。
+需要 Node.js 20.19+（推荐使用 `.nvmrc` 中的 24.19.0）；浏览器端自动化测试使用系统安装的 Google Chrome。
 
 ```bash
 npm install
@@ -123,9 +127,9 @@ content-source/     2023 年画册拆解的原始文字与图片
 docs/               内容审计、素材清单、设计参考与 QA 截图
 public/assets/      生成后的品牌与项目媒体资源（WebP 格式）
 scripts/            内容同步、图片处理与预渲染脚本
-src/components/     导航、页脚、图集、3D 视差海报与全站交互
+src/components/     导航、页脚、图集、首页 WebGL 粒子与全站交互
 src/content/        TypeScript 类型、结构化内容与筛选逻辑
-src/experience/     WebGL 光场、GLSL 像素立面、昼夜对比与色温预览
+src/experience/     WebGL 光场、WebGPU 流光、GLSL 像素立面、昼夜对比与色温预览
 src/pages/          首页、作品、详情、团队、光的实验室、联系及 404
 tests/              Playwright E2E 自动化测试与截屏快照
 ```
