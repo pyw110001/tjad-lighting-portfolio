@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { Project, ProjectMedia } from '../content/types';
 import { springStep, useMotionLoop, type Spring } from './motion';
+import { useLanguage } from '../language';
+import { localizeProject } from '../content/project-en';
 
 export function Arrow({ down = false }: { down?: boolean }) {
   return (
@@ -47,16 +49,17 @@ export function SectionTitle({
   children?: ReactNode;
   masked?: boolean;
 }) {
+  const { language } = useLanguage();
   return (
     <div className="section-title">
       <h2 data-reveal={masked ? undefined : ''} data-line-reveal={masked ? '' : undefined}>
         {masked ? (
           <>
             <span className="title-mask-line"><span className="title-mask-content">{english}</span></span>
-            <span className="title-mask-line title-mask-zh"><span className="title-mask-content">{chinese}</span></span>
+            {language === 'zh' && <span className="title-mask-line title-mask-zh"><span className="title-mask-content">{chinese}</span></span>}
           </>
         ) : (
-          <>{english}<span>{chinese}</span></>
+          <>{english}{language === 'zh' && <span>{chinese}</span>}</>
         )}
       </h2>
       {children}
@@ -73,12 +76,13 @@ export function Media({
   priority?: boolean;
   className?: string;
 }) {
+  const { pick } = useLanguage();
   const [error, setError] = useState(false);
   return error ? (
     <div className="media-error">
       {media.alt}
-      <span>图片暂时无法加载</span>
-      <button onClick={() => setError(false)}>重试</button>
+      <span>{pick('图片暂时无法加载', 'Image unavailable')}</span>
+      <button onClick={() => setError(false)}>{pick('重试', 'Retry')}</button>
     </div>
   ) : (
     <img
@@ -106,6 +110,7 @@ export function ParallaxPoster({
   index?: number;
   priority?: boolean;
 }) {
+  const { pick } = useLanguage();
   const poster = useRef<HTMLAnchorElement>(null);
   const p = useRef<Spring>({ x: 0, y: 0, vx: 0, vy: 0 });
   const target = useRef({ x: 0, y: 0 });
@@ -168,8 +173,8 @@ export function ParallaxPoster({
         to={`/work/${project.slug}`}
         ref={poster}
         className="project-poster"
-        aria-label={`查看${project.name}，方向键倾斜，Escape回正`}
-        data-cursor="探索作品"
+        aria-label={pick(`查看${project.name}，方向键倾斜，Escape回正`, `View ${project.name}; use arrow keys to tilt, Escape to reset`)}
+        data-cursor={pick('探索作品', 'View project')}
         onKeyDown={e => {
           if (reduced) return;
           if (e.key.startsWith('Arrow')) {
@@ -216,6 +221,8 @@ export function ProjectCard({
   index?: number;
   parallax?: boolean;
 }) {
+  const { language, pick } = useLanguage();
+  const displayProject = localizeProject(project, language);
   return (
     <article className="project-card" data-reveal>
       <div className="project-index">
@@ -223,15 +230,15 @@ export function ProjectCard({
         <span />
       </div>
       {parallax ? (
-        <ParallaxPoster project={project} index={index} priority={index < 2} />
+        <ParallaxPoster project={displayProject} index={index} priority={index < 2} />
       ) : (
         <Link
           to={`/work/${project.slug}`}
           className="project-image"
-          aria-label={`查看${project.name}`}
-          data-cursor="探索作品"
+          aria-label={pick(`查看${displayProject.name}`, `View ${displayProject.name}`)}
+          data-cursor={pick('探索作品', 'View project')}
         >
-          <Media media={project.cover} />
+          <Media media={displayProject.cover} />
           <span className="project-open">
             <Arrow />
           </span>
@@ -239,9 +246,9 @@ export function ProjectCard({
       )}
       <div className="project-caption">
         <p>
-          {project.categories.join(' · ')}
+          {displayProject.categories.join(' · ')}
           <span> / </span>
-          {project.city}
+          {displayProject.city}
         </p>
         <Link to={`/work/${project.slug}`} className="project-title-link">
           <span className="project-title-arrow" aria-hidden="true">
@@ -249,10 +256,10 @@ export function ProjectCard({
               <path d="M1 12H41M30 1L41 12L30 23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <h3 aria-label={project.name}>
+          <h3 aria-label={displayProject.name}>
             {parallax ? (
               <span className="project-title-letters" aria-hidden="true">
-                {Array.from(project.name).map((letter, letterIndex) => (
+                {Array.from(displayProject.name).map((letter, letterIndex) => (
                   <span className="project-title-letter" key={`${letterIndex}-${letter}`}>
                     <span className="project-title-letter-track" style={{ transitionDelay: `${letterIndex * 24}ms` }}>
                       <span>{letter === ' ' ? '\u00a0' : letter}</span>
@@ -261,16 +268,17 @@ export function ProjectCard({
                   </span>
                 ))}
               </span>
-            ) : project.name}
+            ) : displayProject.name}
           </h3>
         </Link>
-        <small>{project.cover.kind}</small>
+        <small>{displayProject.cover.kind}</small>
       </div>
     </article>
   );
 }
 
 export function Gallery({ items }: { items: ProjectMedia[] }) {
+  const { pick } = useLanguage();
   const [active, setActive] = useState<number | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
@@ -309,7 +317,7 @@ export function Gallery({ items }: { items: ProjectMedia[] }) {
             <button
               className="gallery-image"
               onClick={() => setActive(i)}
-              aria-label={`放大图片 ${i + 1}：${m.alt}`}
+              aria-label={pick(`放大图片 ${i + 1}：${m.alt}`, `Enlarge image ${i + 1}: ${m.alt}`)}
             >
               <Media media={m} />
               <span>
@@ -325,7 +333,7 @@ export function Gallery({ items }: { items: ProjectMedia[] }) {
       <dialog
         ref={ref}
         className="lightbox"
-        aria-label="项目图片查看器"
+        aria-label={pick('项目图片查看器', 'Project image viewer')}
         onCancel={close}
         onClick={e => {
           if (e.target === e.currentTarget) close();
@@ -334,7 +342,7 @@ export function Gallery({ items }: { items: ProjectMedia[] }) {
         {active !== null && (
           <>
             <button className="lightbox-close" onClick={close} autoFocus>
-              关闭 ×
+              {pick('关闭', 'Close')} ×
             </button>
             <img
               src={items[active].src}
@@ -344,13 +352,13 @@ export function Gallery({ items }: { items: ProjectMedia[] }) {
             />
             <div className="lightbox-controls">
               <button onClick={() => setActive((active - 1 + items.length) % items.length)}>
-                上一张
+                {pick('上一张', 'Previous')}
               </button>
               <span aria-live="polite">
                 {active + 1} / {items.length} · {items[active].kind}
               </span>
               <button onClick={() => setActive((active + 1) % items.length)}>
-                下一张
+                {pick('下一张', 'Next')}
               </button>
             </div>
           </>

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { GlowIconButton } from '../buttons/GlowIconButton';
 import { DEFAULT_NAV_ITEMS, type NavItemConfig } from './LightNavbar';
+import { useLanguage } from '../../language';
+import LanguageSwitch from '../../components/LanguageSwitch';
 import './navigation.css';
 
 export interface FullscreenMenuProps {
@@ -17,6 +19,7 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
   items = DEFAULT_NAV_ITEMS,
   className = '',
 }) => {
+  const { language, pick } = useLanguage();
   const [hoveredImage, setHoveredImage] = useState<string>(
     items[0]?.previewImage || '/assets/projects/01-the-bund.webp'
   );
@@ -42,9 +45,10 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
     <div
       className={`lis-fullscreen-menu ${isOpen ? 'is-open' : ''} ${className}`}
       aria-hidden={isOpen ? undefined : true}
+      inert={!isOpen}
       role="dialog"
       aria-modal="true"
-      aria-label="全屏导航菜单"
+      aria-label={pick('全屏导航菜单', 'Full screen navigation')}
     >
       {/* Light Curtains */}
       <div className="lis-menu-curtains" aria-hidden="true">
@@ -57,7 +61,7 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
       <div className="lis-menu-close-btn">
         <GlowIconButton
           onClick={onClose}
-          aria-label="关闭菜单"
+          aria-label={pick('关闭菜单', 'Close menu')}
           size="lg"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -68,7 +72,8 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
       </div>
 
       <div className="lis-menu-body">
-        <nav id="primary-nav" className="lis-menu-links open" aria-label="全屏主导航">
+        <LanguageSwitch className="menu-language-switch" />
+        <nav id="primary-nav" className="lis-menu-links open" aria-label={pick('全屏主导航', 'Full screen main navigation')}>
           {items.map((item, index) => {
             const numStr = String(index + 1).padStart(2, '0');
             return (
@@ -80,11 +85,11 @@ export const FullscreenMenu: React.FC<FullscreenMenuProps> = ({
                 onMouseEnter={() => {
                   if (item.previewImage) setHoveredImage(item.previewImage);
                 }}
-                aria-label={item.labelZh}
+                aria-label={language === 'zh' ? item.labelZh : item.labelEn}
               >
                 <span className="menu-num">/{numStr}</span>
                 <span className="menu-en">{item.labelEn}</span>
-                <span className="menu-zh">{item.labelZh}</span>
+                {language === 'zh' && <span className="menu-zh">{item.labelZh}</span>}
               </NavLink>
             );
           })}

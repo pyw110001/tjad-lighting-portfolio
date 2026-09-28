@@ -19,6 +19,8 @@ import {
 import { TextLink, Arrow } from '../components/ui';
 import DayNightCompare from '../experience/DayNightCompare';
 import { useActivity, canWebGL } from '../experience/useActivity';
+import { useLabCopy } from '../content/lab-en';
+import { useLanguage } from '../language';
 
 const Scene = lazy(() => import('../experience/LightScene'));
 const FluidLightCanvas = lazy(() => import('../experience/fluid/FluidLightCanvas'));
@@ -32,6 +34,8 @@ const modules: { id: LabModuleId; num: string; en: string; zh: string }[] = [
 ];
 
 export default function Lab() {
+  const t = useLabCopy();
+  const { language } = useLanguage();
   const [params, setParams] = useSearchParams();
   const rawMode = params.get('mode');
   const activeMode: LabModuleId =
@@ -136,11 +140,9 @@ export default function Lab() {
             <span className="lab-index-indicator">05 / INTERACTIVE</span>
             <h1 className="lab-main-title">
               LIGHT LAB
-              <span>光的实验室</span>
+              {language === 'zh' && <span>光的实验室</span>}
             </h1>
-            <p className="lab-hero-intro">
-              在这里，你可以亲手探索光与建筑的关系。通过交互实验，直观理解光如何塑造空间、激活立面、营造场景。
-            </p>
+            <p className="lab-hero-intro">{t("在这里，你可以亲手探索光与建筑的关系。通过交互实验，直观理解光如何塑造空间、激活立面、营造场景。")}</p>
             <div className="lab-hero-meta">Explore. Adjust. Experience.</div>
           </div>
 
@@ -149,7 +151,7 @@ export default function Lab() {
             <div className="sun-arc-backdrop">
               <img
                 src="/assets/brand/hero.webp"
-                alt="建筑与光环境背景"
+                alt={t("建筑与光环境背景")}
                 className="arc-building-bg"
               />
               <svg
@@ -174,7 +176,7 @@ export default function Lab() {
                   left: `${((state.lightField.time - 6) / 12) * 84 + 8}%`,
                   top: `${Math.pow(((state.lightField.time - 12) / 6), 2) * 58 + 14}%`
                 }}
-                title="日照太阳位置"
+                title={t("日照太阳位置")}
               >
                 <div className="sun-pulse" />
                 <div className="sun-core" />
@@ -182,7 +184,7 @@ export default function Lab() {
             </div>
 
             {/* Quick Navigation Anchor Tabs */}
-            <nav className="lab-arc-nav" aria-label="实验快捷导航">
+            <nav className="lab-arc-nav" aria-label={t("实验快捷导航")}>
               {modules.map(m => (
                 <button
                   key={m.id}
@@ -198,11 +200,7 @@ export default function Lab() {
           </div>
 
           <div className="lab-hero-motto">
-            <p>
-              光，
-              <br />
-              让建筑更有生命力。
-            </p>
+            <p>{t("光，")}<br />{t("让建筑更有生命力。")}</p>
             <small>LIGHT GIVES ARCHITECTURE LIFE.</small>
             <div className="scroll-hint">
               <span>SCROLL TO EXPLORE</span>
@@ -220,15 +218,15 @@ export default function Lab() {
             <div className="card-titles">
               <h2>
                 <span className="card-num">01</span> LIGHT FIELD{' '}
-                <small>实时光场</small>
+                {language === 'zh' && <small>实时光场</small>}
               </h2>
-              <p>调整光源参数，或移动指针在立面上探索局部光束。</p>
+              <p>{t("调整光源参数，或移动指针在立面上探索局部光束。")}</p>
             </div>
             <button
               type="button"
               className="lab-reset-btn"
               onClick={() => dispatch({ type: 'RESET_FIELD' })}
-              title="重置光场参数"
+              title={t("重置光场参数")}
             >
               Reset ↺
             </button>
@@ -241,7 +239,7 @@ export default function Lab() {
                   <img
                     className="lab-poster"
                     src="/assets/brand/lab.webp"
-                    alt="建筑光场静态预览"
+                    alt={t("建筑光场静态预览")}
                   />
                 }
               >
@@ -257,18 +255,18 @@ export default function Lab() {
               <img
                 className="lab-poster"
                 src="/assets/brand/lab.webp"
-                alt="建筑光场静态预览"
+                alt={t("建筑光场静态预览")}
               />
             )}
 
             {/* Left Vertical Lighting Tools */}
-            <div className="viewport-toolbar-vertical" role="toolbar" aria-label="光源类型切换">
+            <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("光源类型切换")}>
               {(
                 [
-                  ['sun', '太阳光', '☀'],
-                  ['artificial', '人工光', '⚿'],
-                  ['ambient', '环境光', '◈'],
-                  ['model', '模型切换', '⬡']
+                  ['sun', t("太阳光"), '☀'],
+                  ['artificial', t("人工光"), '⚿'],
+                  ['ambient', t("环境光"), '◈'],
+                  ['model', t("模型切换"), '⬡']
                 ] as [LightSourceType, string, string][]
               ).map(([type, label, icon]) => (
                 <button
@@ -303,7 +301,7 @@ export default function Lab() {
                       value: parseFloat(e.target.value)
                     })
                   }
-                  aria-label="日照时间轴"
+                  aria-label={t("日照时间轴")}
                   className="field-timeline-slider"
                 />
                 <span className="time-boundary">18:00</span>
@@ -316,7 +314,7 @@ export default function Lab() {
               {/* Direction Joystick Indicator */}
               <div
                 className="compass-joystick"
-                title="拖动调整光源方位"
+                title={t("拖动调整光源方位")}
                 onPointerMove={e => {
                   if (e.buttons === 1) handleJoystickMove(e);
                 }}
@@ -335,13 +333,13 @@ export default function Lab() {
           </div>
 
           <div className="card-features">
-            <h4>功能亮点：</h4>
+            <h4>{t("功能亮点：")}</h4>
             <ul>
-              <li>• 拖动时间轴，模拟日照角度与光影变化</li>
-              <li>• 调整光源强度、色温、方向</li>
-              <li>• 支持不同建筑模型（简约模型 / 场馆 / 街区）</li>
-              <li>• 实时渲染光影与材质反射</li>
-              <li>• 移动指针，观察局部光束如何改变立面明暗</li>
+              <li>{t("• 拖动时间轴，模拟日照角度与光影变化")}</li>
+              <li>{t("• 调整光源强度、色温、方向")}</li>
+              <li>{t("• 支持不同建筑模型（简约模型 / 场馆 / 街区）")}</li>
+              <li>{t("• 实时渲染光影与材质反射")}</li>
+              <li>{t("• 移动指针，观察局部光束如何改变立面明暗")}</li>
             </ul>
           </div>
         </section>
@@ -352,15 +350,15 @@ export default function Lab() {
             <div className="card-titles">
               <h2>
                 <span className="card-num">02</span> PIXEL FACADE{' '}
-                <small>像素立面</small>
+                {language === 'zh' && <small>像素立面</small>}
               </h2>
-              <p>用像素化灯光，探索建筑立面的动态表达。</p>
+              <p>{t("用像素化灯光，探索建筑立面的动态表达。")}</p>
             </div>
             <button
               type="button"
               className="lab-reset-btn"
               onClick={() => dispatch({ type: 'RESET_PIXEL' })}
-              title="重置像素立面参数"
+              title={t("重置像素立面参数")}
             >
               Reset ↺
             </button>
@@ -368,7 +366,7 @@ export default function Lab() {
 
           <div className="card-viewport-wrap" ref={stagePixelRef}>
             {supported === true ? (
-              <Suspense fallback={<div className="lab-loading">加载立面模型...</div>}>
+              <Suspense fallback={<div className="lab-loading">{t("加载立面模型...")}</div>}>
                 <Scene
                   mode="pixel"
                   state={state}
@@ -378,18 +376,18 @@ export default function Lab() {
                 />
               </Suspense>
             ) : (
-              <div className="lab-poster-fallback">像素立面需 WebGL 支持</div>
+              <div className="lab-poster-fallback">{t("像素立面需 WebGL 支持")}</div>
             )}
 
             {/* Left Pattern Selection Toolbar */}
-            <div className="viewport-toolbar-vertical" role="toolbar" aria-label="立面动态效果选择">
+            <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("立面动态效果选择")}>
               {(
                 [
-                  ['wave', '波浪', '∿'],
-                  ['ripple', '涟漪', '◎'],
-                  ['flow', '流动', '⫸'],
-                  ['pattern', '图案', '▱'],
-                  ['text', '文字', 'T']
+                  ['wave', t("波浪"), '∿'],
+                  ['ripple', t("涟漪"), '◎'],
+                  ['flow', t("流动"), '⫸'],
+                  ['pattern', t("图案"), '▱'],
+                  ['text', t("文字"), 'T']
                 ] as [PixelPatternType, string, string][]
               ).map(([pat, label, icon]) => (
                 <button
@@ -413,10 +411,10 @@ export default function Lab() {
               <div className="pattern-presets-row">
                 {(
                   [
-                    ['wave', '波浪'],
-                    ['ripple', '涟漪'],
-                    ['flow', '流动'],
-                    ['pattern', '晶格'],
+                    ['wave', t("波浪")],
+                    ['ripple', t("涟漪")],
+                    ['flow', t("流动")],
+                    ['pattern', t("晶格")],
                     ['text', 'TJAD']
                   ] as [PixelPatternType, string][]
                 ).map(([pat, name]) => (
@@ -436,7 +434,7 @@ export default function Lab() {
                   type="button"
                   className="preset-thumb-btn add-btn"
                   onClick={() => dispatch({ type: 'PIXEL_TOGGLE_PAUSE' })}
-                  title={state.pixelFacade.paused ? '播放' : '暂停'}
+                  title={state.pixelFacade.paused ? t("播放") : t("暂停")}
                 >
                   <span>{state.pixelFacade.paused ? '▶' : '❚❚'}</span>
                 </button>
@@ -445,12 +443,12 @@ export default function Lab() {
           </div>
 
           <div className="card-features">
-            <h4>功能亮点：</h4>
+            <h4>{t("功能亮点：")}</h4>
             <ul>
-              <li>• 多种动态效果（波浪 / 涟漪 / 流动 / 图案 / 文字）</li>
-              <li>• 调整速度、亮度、颜色</li>
-              <li>• 支持自定义图案或上传图片</li>
-              <li>• 实时在建筑立面模型上预览效果</li>
+              <li>{t("• 多种动态效果（波浪 / 涟漪 / 流动 / 图案 / 文字）")}</li>
+              <li>{t("• 调整速度、亮度、颜色")}</li>
+              <li>{t("• 支持自定义图案或上传图片")}</li>
+              <li>{t("• 实时在建筑立面模型上预览效果")}</li>
             </ul>
           </div>
         </section>
@@ -461,9 +459,9 @@ export default function Lab() {
             <div className="card-titles">
               <h2>
                 <span className="card-num">03</span> DAY / NIGHT{' '}
-                <small>昼夜切换</small>
+                {language === 'zh' && <small>昼夜切换</small>}
               </h2>
-              <p>在时间的流动中，感受建筑在不同时段的气质。</p>
+              <p>{t("在时间的流动中，感受建筑在不同时段的气质。")}</p>
             </div>
           </div>
 
@@ -476,12 +474,12 @@ export default function Lab() {
           </div>
 
           <div className="card-features">
-            <h4>功能亮点：</h4>
+            <h4>{t("功能亮点：")}</h4>
             <ul>
-              <li>• 拖动时间轴查看不同时段的照明效果</li>
-              <li>• 对比日景 / 黄昏 / 夜景的氛围</li>
-              <li>• 可查看关键时段的灯光策略</li>
-              <li>• 支持多个建筑案例场景切换</li>
+              <li>{t("• 拖动时间轴查看不同时段的照明效果")}</li>
+              <li>{t("• 对比日景 / 黄昏 / 夜景的氛围")}</li>
+              <li>{t("• 可查看关键时段的灯光策略")}</li>
+              <li>{t("• 支持多个建筑案例场景切换")}</li>
             </ul>
           </div>
         </section>
@@ -492,9 +490,9 @@ export default function Lab() {
             <div className="card-titles">
               <h2>
                 <span className="card-num">04</span> COLOR STUDIO{' '}
-                <small>光色实验室</small>
+                {language === 'zh' && <small>光色实验室</small>}
               </h2>
-              <p>探索不同光色如何改变空间情绪。</p>
+              <p>{t("探索不同光色如何改变空间情绪。")}</p>
             </div>
           </div>
 
@@ -502,7 +500,7 @@ export default function Lab() {
             {/* 3D Visual showing the room tinted by the selected light */}
             <div className="color-preview-stage">
               {supported === true ? (
-                <Suspense fallback={<div className="lab-loading">加载光色空间...</div>}>
+                <Suspense fallback={<div className="lab-loading">{t("加载光色空间...")}</div>}>
                   <Scene
                     mode="color"
                     state={state}
@@ -512,18 +510,18 @@ export default function Lab() {
                   />
                 </Suspense>
               ) : (
-                <div className="lab-poster-fallback">光色实验需 WebGL 支持</div>
+                <div className="lab-poster-fallback">{t("光色实验需 WebGL 支持")}</div>
               )}
             </div>
 
             {/* 4 Spatial Presets Cards */}
-            <div className="color-presets-row" role="group" aria-label="选择空间光色预设">
+            <div className="color-presets-row" role="group" aria-label={t("选择空间光色预设")}>
               {(
                 [
-                  ['warm3000', '暖光 3000K', '#ffba6b', '温馨 · 沉静 · 亲和'],
-                  ['neutral4000', '中性光 4000K', '#fff4d6', '明朗 · 纯净 · 商务'],
-                  ['cool6000', '冷白光 6000K', '#d8f0ff', '高效 · 现代 · 通透'],
-                  ['rgb', '彩色光', '#ba7bff', '艺术 · 戏剧 · 沉浸']
+                  ['warm3000', t("暖光 3000K"), '#ffba6b', t("温馨 · 沉静 · 亲和")],
+                  ['neutral4000', t("中性光 4000K"), '#fff4d6', t("明朗 · 纯净 · 商务")],
+                  ['cool6000', t("冷白光 6000K"), '#d8f0ff', t("高效 · 现代 · 通透")],
+                  ['rgb', t("彩色光"), '#ba7bff', t("艺术 · 戏剧 · 沉浸")]
                 ] as [ColorPresetType, string, string, string][]
               ).map(([key, name, color, tag]) => (
                 <button
@@ -547,12 +545,12 @@ export default function Lab() {
           </div>
 
           <div className="card-features">
-            <h4>功能亮点：</h4>
+            <h4>{t("功能亮点：")}</h4>
             <ul>
-              <li>• 调整色温与颜色</li>
-              <li>• 预设不同场景（展厅 / 办公 / 公共空间）</li>
-              <li>• 观察空间氛围变化</li>
-              <li>• 支持导出对比图</li>
+              <li>{t("• 调整色温与颜色")}</li>
+              <li>{t("• 预设不同场景（展厅 / 办公 / 公共空间）")}</li>
+              <li>{t("• 观察空间氛围变化")}</li>
+              <li>{t("• 支持导出对比图")}</li>
             </ul>
           </div>
         </section>
@@ -563,9 +561,9 @@ export default function Lab() {
             <div className="card-titles">
               <h2>
                 <span className="card-num">05</span> FLUID LIGHT{' '}
-                <small>流光粒子</small>
+                {language === 'zh' && <small>流光粒子</small>}
               </h2>
-              <p>基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。</p>
+              <p>{t("基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。")}</p>
             </div>
             <button
               type="button"
@@ -574,14 +572,14 @@ export default function Lab() {
                 waveResetRef.current?.();
                 dispatch({ type: 'RESET_WAVE' });
               }}
-              title="重置流光粒子参数"
+              title={t("重置流光粒子参数")}
             >
               Reset ↺
             </button>
           </div>
 
           {waveReady ? (
-            <Suspense fallback={<div className="card-viewport-wrap lab-loading">加载 WebGPU 流光引擎...</div>}>
+            <Suspense fallback={<div className="card-viewport-wrap lab-loading">{t("加载 WebGPU 流光引擎...")}</div>}>
               <FluidLightCanvas
                 initialPalette={state.fluidLight.palette}
                 onResetRequested={fn => {
@@ -591,17 +589,17 @@ export default function Lab() {
             </Suspense>
           ) : (
             <div className="card-viewport-wrap">
-              <img className="lab-poster" src="/assets/brand/lab.webp" alt="流光粒子静态预览" loading="lazy" />
+              <img className="lab-poster" src="/assets/brand/lab.webp" alt={t("流光粒子静态预览")} loading="lazy" />
             </div>
           )}
 
           <div className="card-features">
-            <h4>功能亮点：</h4>
+            <h4>{t("功能亮点：")}</h4>
             <ul>
-              <li>• WebGPU GPU Compute 并行计算 3,000+ 流光微粒动力学</li>
-              <li>• 鼠标光标漫游向心吸附，右键释放推散光浪</li>
-              <li>• MediaPipe AI 隔空手势感知：食指导引流光、捏合手势推散冲击波</li>
-              <li>• 4 组建筑级色温调色板（暖金 3000K / 极光冷白 6000K / 双色温 / 日光白）</li>
+              <li>{t("• WebGPU GPU Compute 并行计算 3,000+ 流光微粒动力学")}</li>
+              <li>{t("• 鼠标光标漫游向心吸附，右键释放推散光浪")}</li>
+              <li>{t("• MediaPipe AI 隔空手势感知：食指导引流光、捏合手势推散冲击波")}</li>
+              <li>{t("• 4 组建筑级色温调色板（暖金 3000K / 极光冷白 6000K / 双色温 / 日光白）")}</li>
             </ul>
           </div>
         </section>
@@ -609,35 +607,33 @@ export default function Lab() {
         {/* Bottom Right: User Workflow Guide */}
         <section className="lab-card card-guide">
           <div className="card-header">
-            <h3>使用指引</h3>
+            <h3>{t("使用指引")}</h3>
             {copiedNote && (
-              <span className="copied-toast" aria-live="polite">
-                ✓ 实验画面已截取保存！
-              </span>
+              <span className="copied-toast" aria-live="polite">{t("✓ 实验画面已截取保存！")}</span>
             )}
           </div>
 
           <div className="guide-steps-grid">
             <div className="guide-step">
-              <span className="step-num">1 选择模式</span>
+              <span className="step-num">{t("1 选择模式")}</span>
               <div className="step-icon">⊞</div>
-              <p>选择一个实验模块</p>
+              <p>{t("选择一个实验模块")}</p>
             </div>
 
             <div className="guide-step-arrow">→</div>
 
             <div className="guide-step">
-              <span className="step-num">2 调整参数</span>
+              <span className="step-num">{t("2 调整参数")}</span>
               <div className="step-icon">🎛</div>
-              <p>通过鼠标或触控调整光源 / 效果</p>
+              <p>{t("通过鼠标或触控调整光源 / 效果")}</p>
             </div>
 
             <div className="guide-step-arrow">→</div>
 
             <div className="guide-step">
-              <span className="step-num">3 观察变化</span>
+              <span className="step-num">{t("3 观察变化")}</span>
               <div className="step-icon">👁</div>
-              <p>实时查看建筑的光影与氛围</p>
+              <p>{t("实时查看建筑的光影与氛围")}</p>
             </div>
 
             <div className="guide-step-arrow">→</div>
@@ -645,19 +641,19 @@ export default function Lab() {
             <div
               className="guide-step step-clickable"
               onClick={captureScreenshot}
-              title="点击截取保存当前画面"
+              title={t("点击截取保存当前画面")}
               role="button"
               tabIndex={0}
               onKeyDown={e => e.key === 'Enter' && captureScreenshot()}
             >
-              <span className="step-num">4 保存分享</span>
+              <span className="step-num">{t("4 保存分享")}</span>
               <div className="step-icon">📷</div>
-              <p>截取画面，分享你的光影实验</p>
+              <p>{t("截取画面，分享你的光影实验")}</p>
             </div>
           </div>
 
           <div className="guide-footer">
-            <TextLink to="/work">浏览精选作品工程档案</TextLink>
+            <TextLink to="/work">{t("浏览精选作品工程档案")}</TextLink>
           </div>
         </section>
       </main>

@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { Header, Footer } from './components/Layout';
-import { PageEffects, Intro } from './components/Effects';
+import { PageEffects } from './components/Effects';
 import { UnifiedMagneticCursor } from './design-system';
+import { LanguageProvider, useLanguage } from './language';
 import Home from './pages/Home';
 import Work from './pages/Work';
 import About from './pages/About';
@@ -12,22 +13,24 @@ import Lab from './pages/Lab';
 import UIShowcase from './pages/UIShowcase';
 import NotFound from './pages/NotFound';
 import { projects } from './content';
+import { localizeProject } from './content/project-en';
 
-export default function App() {
+function AppContent() {
   const { pathname } = useLocation();
+  const { language, pick } = useLanguage();
 
   useEffect(() => {
     const p = projects.find((p) => pathname === `/work/${p.slug}`);
     const names: Record<string, string> = {
-      '/': 'Light, as Architecture.',
-      '/work': '作品档案',
-      '/about': '专业与团队',
-      '/lab': '光的实验室',
-      '/contact': '联系',
-      '/ui-showcase': 'UI 组件库与设计系统',
+      '/': pick('以光，构筑空间。', 'Light, as Architecture.'),
+      '/work': pick('作品档案', 'Work Archive'),
+      '/about': pick('专业与团队', 'Practice & Team'),
+      '/lab': pick('光的实验室', 'Light Lab'),
+      '/contact': pick('联系', 'Contact'),
+      '/ui-showcase': pick('UI 组件库与设计系统', 'UI Showcase'),
     };
-    document.title = `${p?.name || names[pathname] || '页面未找到'} — TJAD 建筑照明所`;
-  }, [pathname]);
+    document.title = `${p ? localizeProject(p, language).name : names[pathname] || pick('页面未找到', 'Page Not Found')} — ${pick('TJAD 建筑照明所', 'TJAD Architectural Lighting')}`;
+  }, [pathname, language, pick]);
 
   return (
     <>
@@ -47,7 +50,10 @@ export default function App() {
       <Footer />
       <PageEffects />
       <UnifiedMagneticCursor />
-      {pathname === '/' && <Intro />}
     </>
   );
+}
+
+export default function App() {
+  return <LanguageProvider><AppContent /></LanguageProvider>;
 }

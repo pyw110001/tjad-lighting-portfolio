@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { WebGPUFluidEngine, type FluidEngineConfig } from './WebGPUFluidEngine';
 import { type FluidPaletteType, FLUID_PALETTE_INFO } from './fluidPalettes';
 import { useGestureTracking } from './useGestureTracking';
+import { useLabCopy } from '../../content/lab-en';
+import { useLanguage } from '../../language';
 
 interface FluidLightCanvasProps {
   initialPalette?: FluidPaletteType;
@@ -12,6 +14,8 @@ export default function FluidLightCanvas({
   initialPalette = 'warm3000',
   onResetRequested
 }: FluidLightCanvasProps) {
+  const t = useLabCopy();
+  const { language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WebGPUFluidEngine | null>(null);
@@ -249,17 +253,13 @@ export default function FluidLightCanvas({
       <div className="card-viewport-wrap fluid-fallback-wrap">
         <img
           src="/assets/brand/lab.webp"
-          alt="流光粒子静态预览"
+          alt={t("流光粒子静态预览")}
           className="lab-poster"
         />
         <div className="fluid-fallback-overlay">
           <div className="fallback-badge">WEBGPU REQUIRED</div>
-          <h3>流光粒子需 WebGPU 支持</h3>
-          <p>
-            您的浏览器或当前显卡环境暂不支持 WebGPU Compute Shader。
-            <br />
-            推荐使用最新版本 Chrome 113+ 或 Edge 浏览器开启硬件加速进行体验。
-          </p>
+          <h3>{t("流光粒子需 WebGPU 支持")}</h3>
+          <p>{t("您的浏览器或当前显卡环境暂不支持 WebGPU Compute Shader。")}<br />{t("推荐使用最新版本 Chrome 113+ 或 Edge 浏览器开启硬件加速进行体验。")}</p>
         </div>
       </div>
     );
@@ -280,17 +280,17 @@ export default function FluidLightCanvas({
       />
 
       {/* Vertical Toolbar (Left) */}
-      <div className="viewport-toolbar-vertical" role="toolbar" aria-label="流光交互工具栏">
+      <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("流光交互工具栏")}>
         {/* Input Mode Toggle */}
         <button
           type="button"
           className={`toolbar-btn ${inputMode === 'gesture' ? 'active' : ''}`}
           onClick={toggleInputMode}
-          title={inputMode === 'mouse' ? '切换为 AI 手势感应模式' : '切换为鼠标光标模式'}
+          title={inputMode === 'mouse' ? t("切换为 AI 手势感应模式") : t("切换为鼠标光标模式")}
           aria-pressed={inputMode === 'gesture'}
         >
           <span className="btn-icon">{inputMode === 'gesture' ? '✋' : '↖'}</span>
-          <span className="btn-label">{inputMode === 'gesture' ? '手势' : '光标'}</span>
+          <span className="btn-label">{inputMode === 'gesture' ? t("手势") : t("光标")}</span>
         </button>
 
         {/* Color Palette Buttons */}
@@ -300,14 +300,14 @@ export default function FluidLightCanvas({
             type="button"
             className={`toolbar-btn ${currentPalette === p.id ? 'active' : ''}`}
             onClick={() => handlePaletteSelect(p.id)}
-            title={p.nameZh}
+            title={language === 'en' ? p.nameEn : p.nameZh}
             aria-pressed={currentPalette === p.id}
           >
             <span
               className="btn-icon-dot"
               style={{ backgroundColor: p.primaryColor }}
             />
-            <span className="btn-label">{p.nameZh.slice(0, 2)}</span>
+            <span className="btn-label">{language === 'en' ? p.nameEn : p.nameZh.slice(0, 2)}</span>
           </button>
         ))}
 
@@ -316,10 +316,10 @@ export default function FluidLightCanvas({
           type="button"
           className="toolbar-btn"
           onClick={handleTogglePause}
-          title={isPaused ? '继续模拟' : '暂停模拟'}
+          title={isPaused ? t("继续模拟") : t("暂停模拟")}
         >
           <span className="btn-icon">{isPaused ? '▶' : '❚❚'}</span>
-          <span className="btn-label">{isPaused ? '播放' : '暂停'}</span>
+          <span className="btn-label">{isPaused ? t("播放") : t("暂停")}</span>
         </button>
       </div>
 
@@ -336,21 +336,21 @@ export default function FluidLightCanvas({
           <div className="cursor-core" />
           <div className="cursor-pulse-ring" />
           <span className="cursor-status-tag">
-            {isPinching ? '推散光浪 (Pinch)' : '食指导光'}
+            {isPinching ? t("推散光浪 (Pinch)") : t("食指导光")}
           </span>
         </div>
       )}
 
       {/* Camera Gesture PIP Preview (Bottom Right) */}
       {inputMode === 'gesture' && showPip && (
-        <div className="fluid-pip-card" aria-label="手势追踪预览窗">
+        <div className="fluid-pip-card" aria-label={t("手势追踪预览窗")}>
           <div className="pip-header">
-            <span className="pip-title">AI 手势感知</span>
+            <span className="pip-title">{t("AI 手势感知")}</span>
             <button
               type="button"
               className="pip-close"
               onClick={() => setShowPip(false)}
-              title="最小化画中画"
+              title={t("最小化画中画")}
             >
               ×
             </button>
@@ -371,11 +371,11 @@ export default function FluidLightCanvas({
             />
           </div>
           <div className="pip-status-bar">
-            {gestureStatus === 'starting' && '正在连接摄像头...'}
-            {gestureStatus === 'waiting_hand' && '请将右手置于镜头前'}
-            {gestureStatus === 'attracting' && '食指导光中 · 移动手掌'}
-            {gestureStatus === 'pinching' && '捏合中 · 释放流光冲击波'}
-            {gestureStatus === 'error' && (errorMessage || '摄像头连接受限')}
+            {gestureStatus === 'starting' && t("正在连接摄像头...")}
+            {gestureStatus === 'waiting_hand' && t("请将右手置于镜头前")}
+            {gestureStatus === 'attracting' && t("食指导光中 · 移动手掌")}
+            {gestureStatus === 'pinching' && t("捏合中 · 释放流光冲击波")}
+            {gestureStatus === 'error' && (errorMessage ? t(errorMessage) : t("摄像头连接受限"))}
           </div>
         </div>
       )}
@@ -384,7 +384,7 @@ export default function FluidLightCanvas({
       <div className="viewport-overlay-bottom fluid-bottom-bar">
         {/* Gravity Control */}
         <div className="fluid-control-group">
-          <span className="control-label">重力场</span>
+          <span className="control-label">{t("重力场")}</span>
           <input
             type="range"
             min="-15"
@@ -393,14 +393,14 @@ export default function FluidLightCanvas({
             value={gravity}
             onChange={e => handleGravityChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
-            title="调节环境重力加速度"
+            title={t("调节环境重力加速度")}
           />
           <span className="control-val">{gravity.toFixed(1)}</span>
         </div>
 
         {/* Viscosity Control */}
         <div className="fluid-control-group">
-          <span className="control-label">流体粘度</span>
+          <span className="control-label">{t("流体粘度")}</span>
           <input
             type="range"
             min="0.1"
@@ -409,14 +409,14 @@ export default function FluidLightCanvas({
             value={viscosity}
             onChange={e => handleViscosityChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
-            title="调节光微粒流动的粘滞阻力"
+            title={t("调节光微粒流动的粘滞阻力")}
           />
           <span className="control-val">{viscosity.toFixed(2)}</span>
         </div>
 
         {/* Particle Radius Control */}
         <div className="fluid-control-group">
-          <span className="control-label">光粒子尺度</span>
+          <span className="control-label">{t("光粒子尺度")}</span>
           <input
             type="range"
             min="1.5"
@@ -425,7 +425,7 @@ export default function FluidLightCanvas({
             value={particleRadius}
             onChange={e => handleParticleRadiusChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
-            title="调节光斑微内核渲染半径"
+            title={t("调节光斑微内核渲染半径")}
           />
           <span className="control-val">{particleRadius.toFixed(1)}</span>
         </div>
@@ -433,7 +433,7 @@ export default function FluidLightCanvas({
         {/* Performance Badge */}
         <div className="fluid-stats-pill">
           <span className="stat-dot" />
-          <span>{engineRef.current ? `${engineRef.current.particleCount} 微粒` : '3,000+ 微粒'}</span>
+          <span>{engineRef.current ? `${engineRef.current.particleCount} ${t('微粒')}` : t("3,000+ 微粒")}</span>
           <span className="stat-divider">/</span>
           <span>{fps} FPS</span>
         </div>

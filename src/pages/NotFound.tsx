@@ -1,2 +1,7 @@
 import { TextLink } from '../components/ui';
-export default function NotFound(){return <section className="section page not-found"><span className="eyeline">404</span><h1>这里，暂未点亮。</h1><p>页面可能已移动，或链接有误。</p><div><TextLink to="/work">探索作品</TextLink><TextLink to="/">返回首页</TextLink></div></section>;}
+import { useLanguage } from '../language';
+
+export default function NotFound() {
+  const { pick } = useLanguage();
+  return <section className="section page not-found"><span className="eyeline">404</span><h1>{pick('这里，暂未点亮。', 'This space is not yet illuminated.')}</h1><p>{pick('页面可能已移动，或链接有误。', 'The page may have moved, or the link may be incorrect.')}</p><div><TextLink to="/work">{pick('探索作品', 'Explore work')}</TextLink><TextLink to="/">{pick('返回首页', 'Back to home')}</TextLink></div></section>;
+}

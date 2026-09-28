@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { DayNightState } from './labState';
+import { useLabCopy } from '../content/lab-en';
 
 interface Props {
   state: DayNightState;
@@ -19,6 +20,7 @@ const DAY_IMAGE = '/assets/light-lab/comparisons/century-square-day.webp';
 const NIGHT_IMAGE = '/assets/projects/century-square/01_图-1425.webp';
 
 export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: Props) {
+  const t = useLabCopy();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -92,7 +94,7 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
         <div className="compare-layer layer-day">
           <img
             src={DAY_IMAGE}
-            alt="世纪广场白天自然采光"
+            alt={t("世纪广场白天自然采光")}
             className="compare-img"
           />
           <span className="compare-badge badge-day">☀ Day 06:30</span>
@@ -114,7 +116,7 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
           />
           <img
             src={NIGHT_IMAGE}
-            alt="世纪广场夜景人工照明"
+            alt={t("世纪广场夜景人工照明")}
             className="compare-img compare-simulated-night"
             style={{
               opacity: nightAlpha,
@@ -130,13 +132,13 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
         <div
           className="compare-divider"
           style={{ left: `${state.splitRatio * 100}%` }}
-          aria-label="拖动对比日景与夜景"
+          aria-label={t("拖动对比日景与夜景")}
         >
           <div className="divider-line" />
           <button
             type="button"
             className="divider-thumb"
-            aria-label="拖动滑块对比昼夜照明"
+            aria-label={t("拖动滑块对比昼夜照明")}
             onKeyDown={e => {
               if (e.key === 'ArrowLeft') {
                 e.preventDefault();
@@ -162,7 +164,7 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
             step="0.25"
             value={state.time}
             onChange={e => onChangeTime(parseFloat(e.target.value))}
-            aria-label="昼夜时间轴"
+            aria-label={t("昼夜时间轴")}
             className="compare-timeline-slider"
           />
           <div className="compare-timeline-ticks">
@@ -181,10 +183,10 @@ export default function DayNightCompare({ state, onChangeTime, onChangeSplit }: 
 
         <div className="strategy-card">
           <div className="strategy-header">
-            <strong>{currentStrategy.title}</strong>
+            <strong>{t(currentStrategy.title)}</strong>
             <span className="strategy-time">{timeLabel}</span>
           </div>
-          <p>{currentStrategy.desc}</p>
+          <p>{t(currentStrategy.desc)}</p>
         </div>
       </div>
     </div>

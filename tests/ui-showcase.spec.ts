@@ -5,7 +5,7 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
   await page.waitForTimeout(500);
 
   // Check main heading
-  await expect(page.getByRole('heading', { name: 'Design System & Component Showcase' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '设计系统与组件展示' })).toBeVisible();
 
   // Test Segmented Control click
   const pixelTab = page.getByRole('radio', { name: '像素立面' });
@@ -39,7 +39,7 @@ test('UI showcase renders and handles all interactive states', async ({ page, is
     });
 
     // Test Fullscreen Menu Trigger and Capture
-    const menuBtn = page.getByRole('button', { name: 'Open Fullscreen Light Curtain Menu' });
+    const menuBtn = page.getByRole('button', { name: '打开全屏光幕菜单' });
     await menuBtn.click();
     await page.waitForTimeout(600);
     await expect(page.getByRole('dialog', { name: '全屏导航菜单' })).toBeVisible();

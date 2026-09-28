@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useLanguage } from '../../language';
 import './navigation.css';
 
 export interface NavItemConfig {
@@ -29,14 +30,15 @@ export const LightNavbar: React.FC<LightNavbarProps> = ({
   isMenuOpen = false,
   className = '',
 }) => {
+  const { language, pick } = useLanguage();
   return (
-    <nav className={`lis-navbar ${className}`} aria-label="主导航">
+    <nav className={`lis-navbar ${className}`} aria-label={pick('主导航', 'Main navigation')}>
       {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) => `lis-nav-item ${isActive ? 'is-active' : ''}`}
-          aria-label={item.labelZh}
+          aria-label={language === 'zh' ? item.labelZh : item.labelEn}
           data-magnetic
         >
           <span className="lis-nav-text">{item.labelEn}</span>

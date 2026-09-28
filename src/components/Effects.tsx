@@ -1,4 +1,4 @@
-import { useEffect,useRef,useState } from 'react';
+import { useEffect,useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -104,91 +104,4 @@ export function MagneticCursor() {
     };
   }, []);
   return <div className="cursor" ref={ref} aria-hidden="true" />;
-}
-
-export function Intro() {
-  const [visible, setVisible] = useState(false);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    try {
-      if (!sessionStorage.getItem('tjad-intro') && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
-        setVisible(true);
-        sessionStorage.setItem('tjad-intro', '1');
-      }
-    } catch {
-      /* Storage disabled: intro remains skipped. */
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!visible || !canvas.current) return;
-    const c = canvas.current,
-      ctx = c.getContext('2d');
-    if (!ctx) return;
-    const w = (c.width = 900),
-      h = (c.height = 360);
-    ctx.font = '300 98px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('LIGHT.', w / 2, h / 2 + 30);
-    const pixels = ctx.getImageData(0, 0, w, h).data;
-    const points: { x: number; y: number; sx: number; sy: number }[] = [];
-    for (let y = 0; y < h; y += 5)
-      for (let x = 0; x < w; x += 5)
-        if (pixels[(y * w + x) * 4 + 3] > 100) points.push({ x, y, sx: Math.random() * w, sy: Math.random() * h });
-    const start = performance.now();
-    let raf = 0;
-    const frame = (t: number) => {
-      const progress = Math.min(1, (t - start) / 850),
-        e = 1 - Math.pow(1 - progress, 3);
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#c6b58b';
-      for (const p of points) {
-        ctx.beginPath();
-        ctx.arc(p.sx + (p.x - p.sx) * e, p.sy + (p.y - p.sy) * e, 1.1, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (progress < 1) raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    let imageReady = false;
-    let minimumElapsed = false;
-    let cancelled = false;
-    const finishIfReady = () => {
-      if (!cancelled && imageReady && minimumElapsed) setVisible(false);
-    };
-    const heroImage = document.querySelector<HTMLImageElement>('.hero-portal-img');
-    if (heroImage?.decode) {
-      heroImage.decode().catch(() => {}).finally(() => {
-        imageReady = true;
-        finishIfReady();
-      });
-    } else {
-      imageReady = true;
-    }
-    const minimum = setTimeout(() => {
-      minimumElapsed = true;
-      finishIfReady();
-    }, 700);
-    const maximum = setTimeout(() => setVisible(false), 1300);
-    return () => {
-      cancelled = true;
-      clearTimeout(minimum);
-      clearTimeout(maximum);
-      cancelAnimationFrame(raf);
-    };
-  }, [visible]);
-
-  return visible ? (
-    <div className="intro" aria-label="品牌开场动画" onClick={() => setVisible(false)}>
-      <canvas ref={canvas} aria-hidden="true" />
-      <button
-        onClick={e => {
-          e.stopPropagation();
-          setVisible(false);
-        }}
-      >
-        跳过开场 <span>↗</span>
-      </button>
-    </div>
-  ) : null;
 }
