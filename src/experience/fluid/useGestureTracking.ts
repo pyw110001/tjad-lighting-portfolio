@@ -43,6 +43,7 @@ export function useGestureTracking(): GestureTrackingResult {
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
   const activeRef = useRef<boolean>(false);
+  const generationRef = useRef(0);
   const pinchStateRef = useRef<boolean>(false);
 
   const drawSkeleton = useCallback((landmarksList: any[]) => {
@@ -137,6 +138,7 @@ export function useGestureTracking(): GestureTrackingResult {
   }, [drawSkeleton]);
 
   const stop = useCallback(() => {
+    generationRef.current++;
     activeRef.current = false;
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
@@ -146,6 +148,8 @@ export function useGestureTracking(): GestureTrackingResult {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
+    landmarkerRef.current?.close?.();
+    landmarkerRef.current = null;
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.srcObject = null;
@@ -161,6 +165,7 @@ export function useGestureTracking(): GestureTrackingResult {
 
   const start = useCallback(async () => {
     stop();
+    const generation = ++generationRef.current;
     setStatus('starting');
     setErrorMessage(null);
     activeRef.current = true;
@@ -171,6 +176,7 @@ export function useGestureTracking(): GestureTrackingResult {
       const wasmFileset = await FilesetResolver.forVisionTasks(
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.17/wasm'
       );
+      if (generation !== generationRef.current) return;
 
       const landmarker = await HandLandmarker.createFromOptions(wasmFileset, {
         baseOptions: {
@@ -181,6 +187,7 @@ export function useGestureTracking(): GestureTrackingResult {
         runningMode: 'VIDEO',
         numHands: 1
       });
+      if (generation !== generationRef.current) { landmarker.close(); return; }
       landmarkerRef.current = landmarker;
 
       // 2. Request Camera Stream
@@ -188,6 +195,7 @@ export function useGestureTracking(): GestureTrackingResult {
         video: { width: 320, height: 240, facingMode: 'user' },
         audio: false
       });
+      if (generation !== generationRef.current) { stream.getTracks().forEach(track => track.stop()); return; }
       streamRef.current = stream;
 
       if (videoRef.current) {
@@ -198,11 +206,12 @@ export function useGestureTracking(): GestureTrackingResult {
       setStatus('waiting_hand');
       animFrameRef.current = requestAnimationFrame(processFrame);
     } catch (err: any) {
+      if (generation !== generationRef.current) return;
       console.error('Failed to initialize gesture tracking:', err);
       const msg = err?.message || '无法获取摄像头权限或加载手势识别模型';
+      stop();
       setErrorMessage(msg);
       setStatus('error');
-      stop();
     }
   }, [processFrame, stop]);
 

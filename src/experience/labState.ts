@@ -4,7 +4,7 @@
  * and state management for all 4 lighting experiment modules.
  */
 
-export type LabModuleId = 'field' | 'pixel' | 'day' | 'color' | 'wave';
+export type LabModuleId = 'field' | 'pixel' | 'day' | 'color' | 'wave' | 'chroma' | 'lightform' | 'photo';
 
 export type PixelPatternType = 'wave' | 'ripple' | 'flow' | 'pattern' | 'text';
 
@@ -12,7 +12,8 @@ export type LightSourceType = 'sun' | 'artificial' | 'ambient' | 'model';
 
 export type ColorPresetType = 'warm3000' | 'neutral4000' | 'cool6000' | 'rgb';
 
-export type FluidPaletteType = 'warm3000' | 'cool6000' | 'dual' | 'white';
+import { DEFAULT_FLUID_COLORS, type FluidCustomColors, type FluidPaletteType } from './fluid/fluidPalettes';
+export type { FluidPaletteType } from './fluid/fluidPalettes';
 
 export interface LightFieldState {
   time: number; // 6.0 to 18.0 (e.g., 10.5 = 10:30)
@@ -47,6 +48,8 @@ export interface ColorStudioState {
 
 export interface FluidLightState {
   palette: FluidPaletteType;
+  customColors: FluidCustomColors;
+  particleCount: number;
   inputMode: 'mouse' | 'gesture';
   gravity: number;
   viscosity: number;
@@ -64,7 +67,7 @@ export interface FullLabState {
 }
 
 export const initialFullLabState: FullLabState = {
-  activeModule: 'field',
+  activeModule: 'day',
   lightField: {
     time: 10.5,
     lightType: 'sun',
@@ -83,7 +86,7 @@ export const initialFullLabState: FullLabState = {
   },
   dayNight: {
     time: 19.5,
-    splitRatio: 0.5,
+    splitRatio: 0.62,
     keyframe: 'night'
   },
   colorStudio: {
@@ -94,6 +97,8 @@ export const initialFullLabState: FullLabState = {
   },
   fluidLight: {
     palette: 'warm3000',
+    customColors: DEFAULT_FLUID_COLORS,
+    particleCount: 3000,
     inputMode: 'mouse',
     gravity: -9.8,
     viscosity: 0.85,
@@ -222,11 +227,14 @@ export type LabAction =
   | { type: 'COLOR_SET_CUSTOM'; value: string }
   | { type: 'RESET_WAVE' }
   | { type: 'WAVE_SET_PALETTE'; value: FluidPaletteType }
+  | { type: 'WAVE_SET_COLORS'; value: FluidCustomColors }
+  | { type: 'WAVE_SET_COUNT'; value: number }
   | { type: 'WAVE_SET_MODE'; value: 'mouse' | 'gesture' }
   | { type: 'WAVE_SET_GRAVITY'; value: number }
   | { type: 'WAVE_SET_VISCOSITY'; value: number }
   | { type: 'WAVE_SET_RADIUS'; value: number }
-  | { type: 'WAVE_TOGGLE_PAUSE' };
+  | { type: 'WAVE_TOGGLE_PAUSE' }
+  | { type: 'WAVE_SET_PAUSED'; value: boolean };
 
 export function fullLabReducer(state: FullLabState, action: LabAction): FullLabState {
   switch (action.type) {
@@ -321,6 +329,10 @@ export function fullLabReducer(state: FullLabState, action: LabAction): FullLabS
         ...state,
         fluidLight: { ...state.fluidLight, palette: action.value }
       };
+    case 'WAVE_SET_COLORS':
+      return { ...state, fluidLight: { ...state.fluidLight, customColors: action.value } };
+    case 'WAVE_SET_COUNT':
+      return { ...state, fluidLight: { ...state.fluidLight, particleCount: action.value } };
     case 'WAVE_SET_MODE':
       return {
         ...state,
@@ -346,6 +358,8 @@ export function fullLabReducer(state: FullLabState, action: LabAction): FullLabS
         ...state,
         fluidLight: { ...state.fluidLight, paused: !state.fluidLight.paused }
       };
+    case 'WAVE_SET_PAUSED':
+      return { ...state, fluidLight: { ...state.fluidLight, paused: action.value } };
     default:
       return state;
   }

@@ -3,14 +3,16 @@
  * Generates 256-step Float32Array RGBA Look-Up Tables (LUTs) based on velocity magnitude.
  */
 
-export type FluidPaletteType = 'warm3000' | 'cool6000' | 'dual' | 'white';
+export type FluidPaletteType = 'warm3000' | 'cool6000' | 'dual' | 'white' | 'custom';
+export type FluidCustomColors = [string, string];
+export const DEFAULT_FLUID_COLORS: FluidCustomColors = ['#7c5cff', '#26e0cb'];
 
 interface ColorStop {
   t: number;
   color: [number, number, number];
 }
 
-const PALETTES: Record<FluidPaletteType, ColorStop[]> = {
+const PALETTES: Record<Exclude<FluidPaletteType, 'custom'>, ColorStop[]> = {
   // Champagne Gold 3000K - Architectural Warm Light
   warm3000: [
     { t: 0.0, color: [0.65, 0.52, 0.28] }, // Radiant warm gold at rest
@@ -49,8 +51,14 @@ const PALETTES: Record<FluidPaletteType, ColorStop[]> = {
 /**
  * Generates a 256x4 Float32Array containing linear RGBA color values for the given palette.
  */
-export function generateFluidPaletteLUT(paletteType: FluidPaletteType = 'warm3000'): Float32Array {
-  const stops = PALETTES[paletteType] || PALETTES.warm3000;
+export function generateFluidPaletteLUT(paletteType: FluidPaletteType = 'warm3000', customColors: FluidCustomColors = DEFAULT_FLUID_COLORS): Float32Array {
+  const rgb = (hex: string): [number, number, number] => {
+    const value = parseInt(hex.replace('#', ''), 16);
+    return [(value >> 16 & 255) / 255, (value >> 8 & 255) / 255, (value & 255) / 255];
+  };
+  const stops: ColorStop[] = paletteType === 'custom'
+    ? [{ t: 0, color: rgb(customColors[0]) }, { t: 1, color: rgb(customColors[1]) }]
+    : PALETTES[paletteType];
   const data = new Float32Array(256 * 4);
 
   for (let i = 0; i < 256; i++) {

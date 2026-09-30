@@ -1,17 +1,26 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { WebGPUFluidEngine, type FluidEngineConfig } from './WebGPUFluidEngine';
-import { type FluidPaletteType, FLUID_PALETTE_INFO } from './fluidPalettes';
+import { FLUID_PARTICLE_LIMITS, WebGPUFluidEngine } from './WebGPUFluidEngine';
+import { ArrowDownToLine, Expand, Pause, Play, RotateCcw } from 'lucide-react';
+import './workbench.css';
+import { DEFAULT_FLUID_COLORS, type FluidCustomColors, type FluidPaletteType, FLUID_PALETTE_INFO } from './fluidPalettes';
 import { useGestureTracking } from './useGestureTracking';
 import { useLabCopy } from '../../content/lab-en';
 import { useLanguage } from '../../language';
+import type { FluidLightState } from '../labState';
 
 interface FluidLightCanvasProps {
   initialPalette?: FluidPaletteType;
+  initialSettings?: FluidLightState;
+  reducedMotion?: boolean;
+  onSettingsChange?: (patch: Partial<FluidLightState>) => void;
   onResetRequested?: (resetFn: () => void) => void;
 }
 
 export default function FluidLightCanvas({
   initialPalette = 'warm3000',
+  initialSettings,
+  reducedMotion = false,
+  onSettingsChange,
   onResetRequested
 }: FluidLightCanvasProps) {
   const t = useLabCopy();
@@ -20,14 +29,18 @@ export default function FluidLightCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WebGPUFluidEngine | null>(null);
   const syncActivityRef = useRef<(() => void) | null>(null);
+  const reducedMotionRef = useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
 
   const [supported, setSupported] = useState<boolean | null>(null);
-  const [inputMode, setInputMode] = useState<'mouse' | 'gesture'>('mouse');
-  const [currentPalette, setCurrentPalette] = useState<FluidPaletteType>(initialPalette);
-  const [isPaused, setIsPaused] = useState(false);
-  const [gravity, setGravity] = useState(-9.8);
-  const [viscosity, setViscosity] = useState(0.85);
-  const [particleRadius, setParticleRadius] = useState(3.5);
+  const [inputMode, setInputMode] = useState<'mouse' | 'gesture'>(initialSettings?.inputMode ?? 'mouse');
+  const [currentPalette, setCurrentPalette] = useState<FluidPaletteType>(initialSettings?.palette ?? initialPalette);
+  const [customColors, setCustomColors] = useState<FluidCustomColors>(initialSettings?.customColors ?? DEFAULT_FLUID_COLORS);
+  const [particleCount, setParticleCount] = useState(initialSettings?.particleCount ?? FLUID_PARTICLE_LIMITS.default);
+  const [isPaused, setIsPaused] = useState(initialSettings?.paused ?? false);
+  const [gravity, setGravity] = useState(initialSettings?.gravity ?? -9.8);
+  const [viscosity, setViscosity] = useState(initialSettings?.viscosity ?? 0.85);
+  const [particleRadius, setParticleRadius] = useState(initialSettings?.particleRadius ?? 3.5);
   const [showPip, setShowPip] = useState(true);
   const [fps, setFps] = useState(60);
 
@@ -56,18 +69,21 @@ export default function FluidLightCanvas({
     // Set initial canvas physical size based on container dimensions
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const container = containerRef.current;
-    const clientW = container?.clientWidth || 900;
-    const clientH = container?.clientHeight || 560;
+    const clientW = canvas.clientWidth || 900;
+    const clientH = canvas.clientHeight || 560;
     canvas.width = Math.max(300, Math.floor(clientW * dpr));
     canvas.height = Math.max(200, Math.floor(clientH * dpr));
 
     const engine = new WebGPUFluidEngine({
       palette: currentPalette,
+      customColors,
+      particleCount,
       gravity,
       viscosityStrength: viscosity,
       particleRadius
     });
     engineRef.current = engine;
+    if (initialSettings?.paused) engine.togglePause();
 
     let mounted = true;
     let initialized = false;
@@ -99,6 +115,7 @@ export default function FluidLightCanvas({
       .then(() => {
         if (!mounted) return;
         initialized = true;
+        setFps(engine.fps);
         syncActivity();
       })
       .catch(err => {
@@ -111,7 +128,17 @@ export default function FluidLightCanvas({
 
     // Provide reset handler to parent
     if (onResetRequested) {
-      onResetRequested(() => engine.resetSimulation());
+      onResetRequested(() => {
+        engine.resetSimulation();
+        engine.setPalette('warm3000');
+        engine.updateConfig({ gravity: -9.8, viscosityStrength: 0.85, particleRadius: 3.5, customColors: DEFAULT_FLUID_COLORS, particleCount: FLUID_PARTICLE_LIMITS.default });
+        setCustomColors(DEFAULT_FLUID_COLORS); setParticleCount(FLUID_PARTICLE_LIMITS.default);
+        if (engine.isPaused && !reducedMotionRef.current) engine.togglePause();
+        if (!engine.isPaused && reducedMotionRef.current) engine.togglePause();
+        setCurrentPalette('warm3000'); setGravity(-9.8); setViscosity(0.85); setParticleRadius(3.5); setIsPaused(engine.isPaused); setInputMode('mouse');
+        stopGesture();
+        syncActivity();
+      });
     }
 
     const interval = setInterval(() => {
@@ -131,6 +158,14 @@ export default function FluidLightCanvas({
     };
   }, []);
 
+  useEffect(() => {
+    if (!reducedMotion || !engineRef.current || engineRef.current.isPaused) return;
+    engineRef.current.togglePause();
+    engineRef.current.stop();
+    setIsPaused(true);
+    onSettingsChange?.({ paused: true });
+  }, [reducedMotion, onSettingsChange]);
+
   // ResizeObserver for responsive canvas bounds
   useEffect(() => {
     const container = containerRef.current;
@@ -139,7 +174,7 @@ export default function FluidLightCanvas({
     const observer = new ResizeObserver(entries => {
       const entry = entries[0];
       if (entry && engineRef.current) {
-        const { width, height } = entry.contentRect;
+        const { width, height } = canvasRef.current?.getBoundingClientRect() ?? entry.contentRect;
         if (width > 0 && height > 0) {
           engineRef.current.resize(width, height);
         }
@@ -154,13 +189,15 @@ export default function FluidLightCanvas({
   const toggleInputMode = useCallback(() => {
     if (inputMode === 'mouse') {
       setInputMode('gesture');
+      onSettingsChange?.({ inputMode: 'gesture' });
       setShowPip(true);
       startGesture();
     } else {
       setInputMode('mouse');
+      onSettingsChange?.({ inputMode: 'mouse' });
       stopGesture();
     }
-  }, [inputMode, startGesture, stopGesture]);
+  }, [inputMode, startGesture, stopGesture, onSettingsChange]);
 
   // Sync Gesture Cursor into Fluid Engine
   useEffect(() => {
@@ -215,6 +252,22 @@ export default function FluidLightCanvas({
   const handlePaletteSelect = (pal: FluidPaletteType) => {
     setCurrentPalette(pal);
     engineRef.current?.setPalette(pal);
+    onSettingsChange?.({ palette: pal });
+  };
+
+  const handleColorChange = (index: 0 | 1, color: string) => {
+    const next: FluidCustomColors = [...customColors];
+    next[index] = color;
+    setCustomColors(next);
+    setCurrentPalette('custom');
+    engineRef.current?.updateConfig({ palette: 'custom', customColors: next });
+    onSettingsChange?.({ palette: 'custom', customColors: next });
+  };
+
+  const handleParticleCountChange = (value: number) => {
+    setParticleCount(value);
+    engineRef.current?.updateConfig({ particleCount: value });
+    onSettingsChange?.({ particleCount: value });
   };
 
   // Toggle Pause
@@ -222,6 +275,7 @@ export default function FluidLightCanvas({
     if (!engineRef.current) return;
     const paused = engineRef.current.togglePause();
     setIsPaused(paused);
+    onSettingsChange?.({ paused });
     if (paused) {
       engineRef.current.stop();
       if (containerRef.current) containerRef.current.dataset.rendering = 'false';
@@ -233,24 +287,48 @@ export default function FluidLightCanvas({
   const handleGravityChange = (val: number) => {
     setGravity(val);
     engineRef.current?.updateConfig({ gravity: val });
+    onSettingsChange?.({ gravity: val });
   };
 
   // Viscosity change
   const handleViscosityChange = (val: number) => {
     setViscosity(val);
     engineRef.current?.updateConfig({ viscosityStrength: val });
+    onSettingsChange?.({ viscosity: val });
   };
 
   // Particle size change
   const handleParticleRadiusChange = (val: number) => {
     setParticleRadius(val);
     engineRef.current?.updateConfig({ particleRadius: val });
+    onSettingsChange?.({ particleRadius: val });
+  };
+
+  const resetWorkbench = () => {
+    engineRef.current?.resetSimulation();
+    engineRef.current?.setPalette('warm3000');
+    engineRef.current?.updateConfig({ gravity: -9.8, viscosityStrength: 0.85, particleRadius: 3.5, customColors: DEFAULT_FLUID_COLORS, particleCount: FLUID_PARTICLE_LIMITS.default });
+    if (reducedMotion) engineRef.current?.pause(); else engineRef.current?.resume();
+    setCurrentPalette('warm3000'); setGravity(-9.8); setViscosity(0.85); setParticleRadius(3.5);
+    setCustomColors(DEFAULT_FLUID_COLORS); setParticleCount(FLUID_PARTICLE_LIMITS.default);
+    setIsPaused(Boolean(reducedMotion)); setInputMode('mouse'); stopGesture();
+    onSettingsChange?.({ palette: 'warm3000', customColors: DEFAULT_FLUID_COLORS, particleCount: FLUID_PARTICLE_LIMITS.default, gravity: -9.8, viscosity: 0.85, particleRadius: 3.5, paused: Boolean(reducedMotion), inputMode: 'mouse' });
+    syncActivityRef.current?.();
+  };
+
+  const exportPng = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'fluid-light.png';
+    link.click();
   };
 
   // Fallback if WebGPU is unsupported
   if (supported === false) {
     return (
-      <div className="card-viewport-wrap fluid-fallback-wrap">
+      <div className="fluid-light fluid-fallback-wrap">
         <img
           src="/assets/brand/lab.webp"
           alt={t("流光粒子静态预览")}
@@ -267,7 +345,7 @@ export default function FluidLightCanvas({
 
   return (
     <div
-      className="card-viewport-wrap fluid-viewport-container"
+      className="fluid-light fluid-viewport-container"
       ref={containerRef}
       onContextMenu={handleContextMenu}
     >
@@ -279,8 +357,13 @@ export default function FluidLightCanvas({
         onPointerUp={handlePointerUp}
       />
 
+      <div className="fluid-stage-heading"><span>02 / LIGHT LAB</span><h1>{language === 'en' ? 'Fluid Light' : '流光粒子'}</h1><p>LIVE WEBGPU PARTICLES</p></div>
+      <div className="fluid-stage-hint">{language === 'en' ? 'Drag to attract · Right-click to repel' : '拖动吸引 · 右键推散'}</div>
+
       {/* Vertical Toolbar (Left) */}
       <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("流光交互工具栏")}>
+        <div className="fluid-wordmark">FLUID<br />LIGHT</div>
+        <h2>{language === 'en' ? 'Interaction' : '交互方式'}</h2>
         {/* Input Mode Toggle */}
         <button
           type="button"
@@ -293,6 +376,7 @@ export default function FluidLightCanvas({
           <span className="btn-label">{inputMode === 'gesture' ? t("手势") : t("光标")}</span>
         </button>
 
+        <h2>{language === 'en' ? 'Color palettes' : '色彩方案'}</h2>
         {/* Color Palette Buttons */}
         {FLUID_PALETTE_INFO.map(p => (
           <button
@@ -310,17 +394,19 @@ export default function FluidLightCanvas({
             <span className="btn-label">{language === 'en' ? p.nameEn : p.nameZh.slice(0, 2)}</span>
           </button>
         ))}
-
-        {/* Pause / Play */}
-        <button
-          type="button"
-          className="toolbar-btn"
-          onClick={handleTogglePause}
-          title={isPaused ? t("继续模拟") : t("暂停模拟")}
-        >
-          <span className="btn-icon">{isPaused ? '▶' : '❚❚'}</span>
-          <span className="btn-label">{isPaused ? t("播放") : t("暂停")}</span>
+        <button type="button" className={`toolbar-btn ${currentPalette === 'custom' ? 'active' : ''}`} aria-pressed={currentPalette === 'custom'} onClick={() => handlePaletteSelect('custom')}>
+          <span className="btn-icon-dot" style={{ background: `linear-gradient(135deg, ${customColors[0]}, ${customColors[1]})` }} />
+          <span className="btn-label">{t('自定义渐变')}</span>
         </button>
+        <div className="fluid-custom-colors">
+          {(['低速颜色', '高速颜色'] as const).map((label, index) => <label key={label}>
+            <span>{t(label)}</span>
+            <input type="color" value={customColors[index]} aria-label={t(label)} onChange={event => handleColorChange(index as 0 | 1, event.target.value)} />
+            <code>{customColors[index].toUpperCase()}</code>
+          </label>)}
+          <div className="fluid-gradient-preview" style={{ background: `linear-gradient(90deg, ${customColors[0]}, ${customColors[1]})` }} />
+          <p>{t('颜色随运动速度过渡')}</p>
+        </div>
       </div>
 
       {/* Floating Gesture Luminous Cursor */}
@@ -328,8 +414,8 @@ export default function FluidLightCanvas({
         <div
           className={`gesture-luminous-cursor ${isPinching ? 'pinch-shockwave' : ''}`}
           style={{
-            left: `${cursorPos.x * 100}%`,
-            top: `${cursorPos.y * 100}%`
+            left: `${(canvasRef.current?.offsetLeft ?? 220) + cursorPos.x * (canvasRef.current?.clientWidth ?? 0)}px`,
+            top: `${(canvasRef.current?.offsetTop ?? 0) + cursorPos.y * (canvasRef.current?.clientHeight ?? 0)}px`
           }}
           aria-hidden="true"
         >
@@ -382,6 +468,7 @@ export default function FluidLightCanvas({
 
       {/* Bottom Horizontal Parameter Toolbar */}
       <div className="viewport-overlay-bottom fluid-bottom-bar">
+        <div className="fluid-inspector-title"><span>FLUID / SETTINGS</span><h2>{language === 'en' ? 'Particle controls' : '粒子参数'}</h2></div>
         {/* Gravity Control */}
         <div className="fluid-control-group">
           <span className="control-label">{t("重力场")}</span>
@@ -394,6 +481,7 @@ export default function FluidLightCanvas({
             onChange={e => handleGravityChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
             title={t("调节环境重力加速度")}
+            aria-label={t("调节环境重力加速度")}
           />
           <span className="control-val">{gravity.toFixed(1)}</span>
         </div>
@@ -410,6 +498,7 @@ export default function FluidLightCanvas({
             onChange={e => handleViscosityChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
             title={t("调节光微粒流动的粘滞阻力")}
+            aria-label={t("调节光微粒流动的粘滞阻力")}
           />
           <span className="control-val">{viscosity.toFixed(2)}</span>
         </div>
@@ -426,18 +515,33 @@ export default function FluidLightCanvas({
             onChange={e => handleParticleRadiusChange(parseFloat(e.target.value))}
             className="field-timeline-slider"
             title={t("调节光斑微内核渲染半径")}
+            aria-label={t("调节光斑微内核渲染半径")}
           />
           <span className="control-val">{particleRadius.toFixed(1)}</span>
         </div>
 
         {/* Performance Badge */}
+        <div className="fluid-control-group">
+          <span className="control-label">{t('粒子数量')}</span>
+          <input type="range" min={FLUID_PARTICLE_LIMITS.min} max={FLUID_PARTICLE_LIMITS.max} step={FLUID_PARTICLE_LIMITS.step} value={particleCount} onChange={event => handleParticleCountChange(Number(event.target.value))} aria-label={t('粒子数量')} />
+          <span className="control-val">{particleCount.toLocaleString(language === 'en' ? 'en-US' : 'zh-CN')}</span>
+        </div>
         <div className="fluid-stats-pill">
           <span className="stat-dot" />
-          <span>{engineRef.current ? `${engineRef.current.particleCount} ${t('微粒')}` : t("3,000+ 微粒")}</span>
+          <span>{particleCount.toLocaleString(language === 'en' ? 'en-US' : 'zh-CN')} {t('微粒')}</span>
           <span className="stat-divider">/</span>
           <span>{fps} FPS</span>
         </div>
       </div>
+      <footer className="fluid-transport">
+        <button className="fluid-transport-play" onClick={handleTogglePause} aria-label={language === 'en' ? (isPaused ? 'Resume simulation' : 'Pause simulation') : (isPaused ? '继续模拟' : '暂停模拟')}>{isPaused ? <Play size={20} fill="currentColor" /> : <Pause size={20} fill="currentColor" />}</button>
+        <span>{isPaused ? (language === 'en' ? 'Paused' : '已暂停') : (language === 'en' ? 'Live WebGPU particles' : '实时 WebGPU 粒子')}</span>
+        <button onClick={resetWorkbench} aria-label={language === 'en' ? 'Reset simulation' : '重置模拟'}><RotateCcw size={19} /></button>
+        <button onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void containerRef.current?.requestFullscreen(); }} aria-label={language === 'en' ? 'Toggle fullscreen' : '切换全屏'}><Expand size={19} /></button>
+        <i />
+        <span>PNG STILL</span>
+        <button className="fluid-export" onClick={exportPng}><ArrowDownToLine size={18} />{language === 'en' ? 'Export PNG' : '导出 PNG'}</button>
+      </footer>
     </div>
   );
 }
