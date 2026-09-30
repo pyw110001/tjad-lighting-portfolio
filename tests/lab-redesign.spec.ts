@@ -1,207 +1,109 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('LIGHT LAB Redesign - 5-Module Interactive Architecture', () => {
-  test('renders top celestial hero, all 5 experiment cards, and user guide', async ({
-    page
-  }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
-    page.on('pageerror', err => consoleErrors.push(err.message));
+test.describe('Light Lab workbench', () => {
+  test.skip(({ isMobile }) => isMobile, 'This redesign targets the desktop workbench.');
 
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+  test('keeps the site header visible on scroll and shows one language in the rail', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 650 });
+    await page.goto('/lab?mode=lightform');
+    await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'lightform');
+    const railLabels = page.locator('.lab-rail-label');
+    await expect(railLabels).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '建筑光影模拟', '测试项']);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.locator('.site-header')).toHaveCSS('position', 'fixed');
+    expect((await page.locator('.site-header').boundingBox())?.y).toBe(0);
 
-    // Hero title and celestial elements
-    await expect(page.locator('.lab-main-title')).toContainText('LIGHT LAB');
-    await expect(page.locator('.sun-disc-handle')).toBeVisible();
-
-    // 5 Navigation Anchor Items
-    const navItems = page.locator('.arc-nav-item');
-    await expect(navItems).toHaveCount(5);
-
-    // All 5 Experiment Cards
-    await expect(page.locator('#lab-field')).toBeVisible();
-    await expect(page.locator('#lab-pixel')).toBeVisible();
-    await expect(page.locator('#lab-day')).toBeVisible();
-    await expect(page.locator('#lab-color')).toBeVisible();
-    await expect(page.locator('#lab-wave')).toBeVisible();
-
-    // Bottom User Guide
-    await expect(page.locator('.card-guide')).toBeVisible();
-    await expect(page.locator('.guide-step')).toHaveCount(4);
-
-    expect(consoleErrors).toEqual([]);
+    await page.getByRole('button', { name: '切换为英文' }).first().click();
+    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Lightform Studio', 'Photo Lab']);
+    await expect(page.locator('.lab-rail-footer')).toContainText('EXPLORE');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Lightform Studio', 'Photo Lab']);
+    await page.getByRole('button', { name: 'Switch to Chinese' }).first().click();
+    await expect(railLabels.first()).toHaveText('昼夜切换');
+    await expect(page.locator('.lab-rail-footer')).toContainText('探索');
   });
 
-  test('01 LIGHT FIELD: solar timeline slider and compass angle update state', async ({
-    page
-  }) => {
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const fieldCard = page.locator('#lab-field');
-    await fieldCard.scrollIntoViewIfNeeded();
-
-    // Drag timeline slider to 16:00
-    const slider = fieldCard.getByLabel('日照时间轴');
-    await slider.fill('16');
-    await expect(fieldCard.locator('.current-time-badge')).toContainText('16:00');
-
-    // Sun disc on hero should reflect time progression
-    const sunHandle = page.locator('.sun-disc-handle');
-    const styleLeft = await sunHandle.evaluate(el => el.style.left);
-    expect(parseFloat(styleLeft)).toBeGreaterThan(50); // After noon
-
-    // Click Artificial light button
-    const artBtn = fieldCard.getByRole('button', { name: '人工光' });
-    await artBtn.click();
-    await expect(artBtn).toHaveAttribute('aria-pressed', 'true');
-
-    // Click Reset button
-    await fieldCard.locator('.lab-reset-btn').click();
-    await expect(fieldCard.locator('.current-time-badge')).toContainText('10:30');
+  test('shows one scene, five rail entries and a usable console at 1440px', async ({ page }, testInfo) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('/lab');
+    await expect(page.locator('.lab-rail-item')).toHaveCount(5);
+    await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'day');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('DAY / NIGHT');
+    await expect(page.locator('.lab-scene-photo').first()).toHaveAttribute('src', '/assets/light-lab/scenes/day.webp');
+    await expect(page.locator('.lab-console')).toBeVisible();
+    const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: innerWidth, stageHeight: document.querySelector('.lab-stage')?.getBoundingClientRect().height }));
+    expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.stageHeight).toBeGreaterThan(650);
+    await page.screenshot({ path: testInfo.outputPath('lab-default-day.png') });
+    expect(errors).toEqual([]);
   });
 
-  test('02 PIXEL FACADE: pattern selection and pause/play toggle', async ({
-    page
-  }) => {
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const pixelCard = page.locator('#lab-pixel');
-    await pixelCard.scrollIntoViewIfNeeded();
-
-    // Click Ripple pattern
-    const rippleBtn = pixelCard.locator('.toolbar-btn', { hasText: '涟漪' });
-    await rippleBtn.click();
-    await expect(rippleBtn).toHaveAttribute('aria-pressed', 'true');
-
-    // Click Wave thumbnail preset
-    const waveThumb = pixelCard.locator('.preset-thumb-btn', { hasText: '波浪' });
-    await waveThumb.click();
-    await expect(waveThumb).toHaveClass(/selected/);
-
-    // Toggle pause/play
-    const pauseBtn = pixelCard.locator('.add-btn');
-    await expect(pauseBtn).toContainText('❚❚');
-    await pauseBtn.click();
-    await expect(pauseBtn).toContainText('▶');
-  });
-
-  test('03 DAY / NIGHT: interactive split slider and time scrubbing strategy', async ({
-    page,
-    isMobile
-  }) => {
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const dayCard = page.locator('#lab-day');
-    await dayCard.scrollIntoViewIfNeeded();
-
-    await expect(dayCard.locator('.layer-day img')).toHaveAttribute(
-      'src',
-      '/assets/light-lab/comparisons/century-square-day.webp'
-    );
-    await expect(dayCard.locator('.compare-simulated-night')).toHaveAttribute(
-      'src',
-      '/assets/projects/century-square/01_图-1425.webp'
-    );
-    if (isMobile) {
-      expect((await dayCard.locator('.compare-stage').boundingBox())?.height).toBeGreaterThan(180);
+  test('removed module URLs resolve to the day/night workbench', async ({ page }) => {
+    for (const mode of ['field', 'pixel', 'color']) {
+      await page.goto(`/lab?mode=${mode}`);
+      await expect(page).toHaveURL(/mode=day/);
+      await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'day');
+      await expect(page.locator('.lab-rail-label')).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '建筑光影模拟', '测试项']);
+      await expect(page.locator('.lab-rail-number')).toHaveText(['01', '02', '03', '04', '05']);
     }
-
-    // Check badges
-    await expect(dayCard.locator('.badge-day')).toContainText('06:30');
-    await expect(dayCard.locator('.badge-night')).toContainText('19:30');
-
-    // Drag / click timeline tick for 24:00 (Late-night energy saving mode)
-    const tick24 = dayCard.locator('.timeline-tick', { hasText: '24:00' });
-    await tick24.click();
-    await expect(dayCard.locator('.strategy-card strong')).toContainText('深夜节能模式');
-    await expect(dayCard.locator('.compare-simulated-night')).toHaveCSS('opacity', '1');
-
-    // Click 12:00
-    const tick12 = dayCard.locator('.timeline-tick', { hasText: '12:00' });
-    await tick12.click();
-    await expect(dayCard.locator('.strategy-card strong')).toContainText('正午顶光抑制');
-    await expect(dayCard.locator('.compare-simulated-night')).toHaveCSS('opacity', '0');
-    await expect(dayCard.locator('.badge-night')).toContainText('Day 12:00');
   });
 
-  test('04 COLOR STUDIO: 4 spatial lighting presets switch active state', async ({
-    page
-  }) => {
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const colorCard = page.locator('#lab-color');
-    await colorCard.scrollIntoViewIfNeeded();
-
-    // 4 preset cards
-    const warmBtn = colorCard.getByRole('button', { name: /暖光 3000K/ });
-    const neutralBtn = colorCard.getByRole('button', { name: /中性光 4000K/ });
-    const coolBtn = colorCard.getByRole('button', { name: /冷白光 6000K/ });
-    const rgbBtn = colorCard.getByRole('button', { name: /彩色光/ });
-
-    await expect(warmBtn).toHaveAttribute('aria-pressed', 'true');
-
-    await coolBtn.click();
-    await expect(coolBtn).toHaveAttribute('aria-pressed', 'true');
-    await expect(warmBtn).toHaveAttribute('aria-pressed', 'false');
-
-    await rgbBtn.click();
-    await expect(rgbBtn).toHaveAttribute('aria-pressed', 'true');
+  test('day/night settings survive module switching and reset', async ({ page }) => {
+    await page.goto('/lab');
+    const timeline = page.getByRole('slider', { name: '昼夜时间轴' });
+    await timeline.fill('12');
+    await page.locator('.lab-rail-item[data-module="chroma"]').click();
+    await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'chroma');
+    await page.goBack();
+    await expect(timeline).toHaveValue('12');
+    await page.getByRole('button', { name: '重置' }).click();
+    await expect(timeline).toHaveValue('19.5');
   });
 
-  test('User Guide: step 4 triggers screenshot export without errors', async ({
-    page
-  }) => {
-    await page.goto('/lab', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const guideCard = page.locator('.card-guide');
-    await guideCard.scrollIntoViewIfNeeded();
-
-    const step4 = guideCard.locator('.step-clickable');
-    await step4.click();
-
-    // Should display completion toast
-    await expect(guideCard.locator('.copied-toast')).toBeVisible();
+  test('day/night uses aligned assets, time and keyboard-operable divider', async ({ page }, testInfo) => {
+    await page.goto('/lab?mode=day');
+    await expect(page.locator('.lab-day-stage img')).toHaveCount(2);
+    await expect(page.locator('.lab-day-stage img').nth(0)).toHaveAttribute('src', '/assets/light-lab/scenes/day.webp');
+    await expect(page.locator('.lab-day-stage img').nth(1)).toHaveAttribute('src', '/assets/light-lab/scenes/night.webp');
+    const divider = page.getByRole('slider', { name: '昼夜对比位置' });
+    await divider.focus();
+    await divider.press('ArrowRight');
+    await expect(divider).toHaveAttribute('aria-valuenow', '67');
+    await page.getByRole('button', { name: '白天' }).first().click();
+    await expect(page.locator('.lab-day-night-layer')).toHaveCSS('opacity', '0');
+    await page.getByRole('button', { name: '夜晚' }).first().click();
+    await expect(page.locator('.lab-day-night-layer')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: testInfo.outputPath('lab-day-night.png') });
   });
 
-  test('Visual capture: capture screenshot of 02 PIXEL FACADE', async ({ page }) => {
-    await page.goto('/lab', { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
-    const fieldCard = page.locator('#lab-field');
-    await fieldCard.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(500);
-    await fieldCard.screenshot({ path: 'tests/artifacts/field-current.png' });
+  test('day/night English UI, help and screenshot export work', async ({ page }) => {
+    await page.goto('/lab?mode=day');
+    await page.getByRole('button', { name: '切换为英文' }).first().click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('.lab-stage-copy p')).toContainText('See how the building changes character');
+    await page.getByRole('button', { name: /How to use the lab/ }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: /Save current scene/ }).click();
+    expect((await download).suggestedFilename()).toMatch(/TJAD-Light-Lab-day\.png/);
+    await expect(page.locator('.lab-message')).toContainText('Scene saved');
+  });
 
-    const pixelCard = page.locator('#lab-pixel');
-    await pixelCard.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(500);
-    await pixelCard.screenshot({ path: 'tests/artifacts/pixel-wave.png' });
-
-    // Click Ripple
-    await pixelCard.locator('.toolbar-btn', { hasText: '涟漪' }).click();
-    await page.waitForTimeout(500);
-    await pixelCard.screenshot({ path: 'tests/artifacts/pixel-ripple.png' });
-
-    // Click Flow
-    await pixelCard.locator('.toolbar-btn', { hasText: '流动' }).click();
-    await page.waitForTimeout(500);
-    await pixelCard.screenshot({ path: 'tests/artifacts/pixel-flow.png' });
-
-    // Click Pattern / Lattice
-    await pixelCard.locator('.toolbar-btn', { hasText: '图案' }).click();
-    await page.waitForTimeout(500);
-    await pixelCard.screenshot({ path: 'tests/artifacts/pixel-lattice.png' });
-
-    // Click Text
-    await pixelCard.locator('.toolbar-btn', { hasText: '文字' }).click();
-    await page.waitForTimeout(500);
-    await pixelCard.screenshot({ path: 'tests/artifacts/pixel-text.png' });
+  test('reduced motion and missing WebGL retain day/night comparison', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript(() => {
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (...args) {
+        if (args[0] === 'webgl2') return null;
+        return getContext.apply(this, args as Parameters<typeof getContext>);
+      } as typeof getContext;
+    });
+    await page.goto('/lab?mode=day');
+    await expect(page.locator('.lab-scene-photo').first()).toBeVisible();
+    await expect(page.locator('.lab-effect-canvas')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '对比播放' })).toBeDisabled();
+    await expect(page.getByRole('slider', { name: '昼夜时间轴' })).toBeVisible();
   });
 });

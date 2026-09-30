@@ -23,7 +23,7 @@ test('home opens without intro and language choice persists across pages', async
   await page.goto('/contact');
   await expect(page.getByRole('heading', { level: 2, name: 'Project enquiries' })).toBeVisible();
   await page.goto('/lab');
-  await expect(page.locator('.lab-hero-intro')).toContainText('Explore the relationship between light and architecture.');
+  await expect(page.locator('.lab-stage-copy p')).toContainText('See how the building changes character through the day.');
 
   await page.getByRole('button', { name: 'Switch to Chinese' }).first().click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');

@@ -1,4 +1,6 @@
-import { generateFluidPaletteLUT, type FluidPaletteType } from './fluidPalettes';
+import { DEFAULT_FLUID_COLORS, generateFluidPaletteLUT, type FluidCustomColors, type FluidPaletteType } from './fluidPalettes';
+
+export const FLUID_PARTICLE_LIMITS = { min: 500, max: 10000, step: 500, default: 3000 };
 
 export interface FluidEngineConfig {
   gravity: number;
@@ -18,6 +20,8 @@ export interface FluidEngineConfig {
   spawnDensity: number;
   jitterStr: number;
   palette: FluidPaletteType;
+  customColors: FluidCustomColors;
+  particleCount: number;
 }
 
 export const DEFAULT_FLUID_CONFIG: FluidEngineConfig = {
@@ -37,7 +41,9 @@ export const DEFAULT_FLUID_CONFIG: FluidEngineConfig = {
   velocityDisplayMax: 10.0,
   spawnDensity: 0.38,
   jitterStr: 0.02,
-  palette: 'warm3000'
+  palette: 'warm3000',
+  customColors: DEFAULT_FLUID_COLORS,
+  particleCount: FLUID_PARTICLE_LIMITS.default
 };
 
 const MAX_PARTICLES = 30000;
@@ -150,6 +156,7 @@ export class WebGPUFluidEngine {
   private frameCount = 0;
   private lastFpsTime = 0;
   private destroyed = false;
+  private spawnSpacing = DEFAULT_FLUID_CONFIG.spawnDensity;
 
   constructor(initialConfig: Partial<FluidEngineConfig> = {}) {
     this.config = { ...DEFAULT_FLUID_CONFIG, ...initialConfig };
@@ -249,15 +256,20 @@ export class WebGPUFluidEngine {
   }
 
   public setPalette(palette: FluidPaletteType): void {
-    this.config.palette = palette;
-    this.uploadGradientLUT(palette);
+    this.updateConfig({ palette });
   }
 
   public updateConfig(partial: Partial<FluidEngineConfig>): void {
     this.config = { ...this.config, ...partial };
-    if (partial.palette) {
-      this.uploadGradientLUT(partial.palette);
+    if (partial.palette !== undefined || partial.customColors !== undefined) {
+      this.uploadGradientLUT(this.config.palette);
     }
+    if (partial.particleCount !== undefined) {
+      this.config.particleCount = Math.max(FLUID_PARTICLE_LIMITS.min, Math.min(FLUID_PARTICLE_LIMITS.max, Math.round(partial.particleCount)));
+      if (this.particleCount !== this.config.particleCount) this.resetSimulation();
+    }
+    // Paused artwork must respond to color, size and count edits immediately.
+    if (this.isPaused) this.renderFrame(performance.now());
   }
 
   public setPointer(worldX: number, worldY: number, active: boolean, strengthSign = 1): void {
@@ -270,6 +282,11 @@ export class WebGPUFluidEngine {
       this.mouseState.active = 0;
       this.mouseState.strength = 0;
     }
+  }
+
+  public setNormalizedPointer(u: number, v: number, active: boolean, scatter = false): void {
+    this.setPointer(this.bounds.minX + u * (this.bounds.maxX - this.bounds.minX),
+      this.bounds.minY + (1 - v) * (this.bounds.maxY - this.bounds.minY), active, scatter ? -1.2 : 1);
   }
 
   public screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
@@ -299,7 +316,7 @@ export class WebGPUFluidEngine {
         alphaMode: 'opaque'
       });
       this.updateBounds();
-      if (this.particleCount < 1000) {
+      if (this.particleCount === 0) {
         this.resetSimulation();
       }
     }
@@ -312,27 +329,28 @@ export class WebGPUFluidEngine {
     const boundsH = this.bounds.maxY - this.bounds.minY;
     const spawnW = boundsW * 0.85;
     const spawnH = boundsH * 0.40;
-    const startX = -spawnW / 2;
     const startY = -boundsH / 2 + 0.5;
 
     const positions: number[] = [];
     const velocities: number[] = [];
-    const spacing = this.config.spawnDensity;
-    const jitter = this.config.jitterStr;
-
-    for (let y = startY; y < startY + spawnH; y += spacing) {
-      for (let x = startX; x < startX + spawnW; x += spacing) {
-        if (positions.length / 2 >= MAX_PARTICLES) break;
-        const jx = x + (Math.random() - 0.5) * jitter;
-        const jy = y + (Math.random() - 0.5) * jitter;
-        positions.push(jx, jy);
-        velocities.push(0, 0);
-      }
+    const count = Math.max(FLUID_PARTICLE_LIMITS.min, Math.min(FLUID_PARTICLE_LIMITS.max, Math.round(this.config.particleCount)));
+    const columns = Math.ceil(Math.sqrt(count * spawnW / spawnH));
+    const rows = Math.ceil(count / columns);
+    const spacing = Math.min(spawnW / columns, spawnH / rows);
+    this.spawnSpacing = spacing;
+    const startX = -(columns - 1) * spacing / 2;
+    const jitter = Math.min(this.config.jitterStr, spacing * .1);
+    for (let i = 0; i < count; i++) {
+      positions.push(startX + (i % columns) * spacing + (Math.random() - .5) * jitter,
+        startY + Math.floor(i / columns) * spacing + (Math.random() - .5) * jitter);
+      velocities.push(0, 0);
     }
 
     this.particleCount = positions.length / 2;
+    if (this.canvas) this.canvas.dataset.particleCount = String(this.particleCount);
     this.device.queue.writeBuffer(this.positionsBuffer, 0, new Float32Array(positions));
     this.device.queue.writeBuffer(this.velocitiesBuffer, 0, new Float32Array(velocities));
+    if (this.isPaused) this.renderFrame(performance.now());
   }
 
   public destroy(): void {
@@ -417,7 +435,7 @@ export class WebGPUFluidEngine {
 
   private uploadGradientLUT(palette: FluidPaletteType): void {
     if (!this.device || !this.gradientBuffer) return;
-    const data = generateFluidPaletteLUT(palette);
+    const data = generateFluidPaletteLUT(palette, this.config.customColors);
     this.device.queue.writeBuffer(this.gradientBuffer, 0, data);
   }
 
@@ -1124,7 +1142,8 @@ export class WebGPUFluidEngine {
     this.uniformF32[2] = dt;
     this.uniformU32[3] = this.particleCount;
     this.uniformF32[4] = k.h;
-    this.uniformF32[5] = this.config.targetDensity;
+    // Keep the same pressure balance when count or source aspect ratio changes.
+    this.uniformF32[5] = this.config.targetDensity * (this.config.spawnDensity / this.spawnSpacing) ** 2;
     this.uniformF32[6] = this.config.pressureMultiplier;
     this.uniformF32[7] = this.config.nearPressureMultiplier;
     this.uniformF32[8] = this.config.viscosityStrength;

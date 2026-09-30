@@ -1,662 +1,211 @@
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  useCallback
-} from 'react';
+import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  fullLabReducer,
-  initialFullLabState,
-  type LabModuleId,
-  type PixelPatternType,
-  type LightSourceType,
-  type ColorPresetType
-} from '../experience/labState';
-import { TextLink, Arrow } from '../components/ui';
-import DayNightCompare from '../experience/DayNightCompare';
-import { useActivity, canWebGL } from '../experience/useActivity';
+import { fullLabReducer, initialFullLabState } from '../experience/labState';
+import type { FluidLightState, LabModuleId } from '../experience/labState';
+import { useActivity } from '../experience/useActivity';
 import { useLabCopy } from '../content/lab-en';
+import { initialChromaSession, type ChromaSession } from '../experience/chroma/session';
 import { useLanguage } from '../language';
+import { LabMediaSession } from '../experience/lightform/mediaSession';
+import './lab-workbench.css';
 
-const Scene = lazy(() => import('../experience/LightScene'));
 const FluidLightCanvas = lazy(() => import('../experience/fluid/FluidLightCanvas'));
+const ChromaField = lazy(() => import('../experience/chroma/App'));
+const LightformStudio = lazy(() => import('../experience/lightform/App'));
+const PhotoStudio = lazy(() => import('../experience/photo/App'));
+const asset = (name: string) => `/assets/light-lab/scenes/${name}.webp`;
 
-const modules: { id: LabModuleId; num: string; en: string; zh: string }[] = [
-  { id: 'field', num: '01', en: 'Light Field', zh: '实时光场' },
-  { id: 'pixel', num: '02', en: 'Pixel Facade', zh: '像素立面' },
-  { id: 'day', num: '03', en: 'Day / Night', zh: '昼夜切换' },
-  { id: 'color', num: '04', en: 'Color Studio', zh: '光色实验室' },
-  { id: 'wave', num: '05', en: 'Fluid Light', zh: '流光粒子' }
+const modules: { id: LabModuleId; num: string; en: string; zh: string; heading: string; image?: string; description: string }[] = [
+  { id: 'day', num: '01', en: 'Day / Night', zh: '昼夜切换', heading: 'DAY / NIGHT', image: 'day', description: '在时间的流动中，感受建筑在不同时段的气质。' },
+  { id: 'wave', num: '02', en: 'Fluid Light', zh: '流光粒子', heading: 'FLUID LIGHT', image: 'wave', description: '基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。' },
+  { id: 'chroma', num: '03', en: 'Chroma Field', zh: '色彩粒子场', heading: 'CHROMA FIELD', description: '上传图片，用色彩与声音塑造可交互的粒子画面。' },
+  { id: 'lightform', num: '04', en: 'Lightform Studio', zh: '建筑光影模拟', heading: 'LIGHTFORM STUDIO', description: '在三座建筑场景中预演图片与视频的灯光表达。' },
+  { id: 'photo', num: '05', en: 'Photo Lab', zh: '测试项', heading: 'PHOTO LAB', description: '用固定视角夜景图片，预演素材与实时粒子的建筑表达。' }
 ];
+
+function Choice({ selected, onClick, children, className = '' }: { selected: boolean; onClick: () => void; children: ReactNode; className?: string }) {
+  return <button type="button" className={`lab-choice ${selected ? 'is-active' : ''} ${className}`} aria-pressed={selected} onClick={onClick}>{children}</button>;
+}
+
+function Slider({ label, value, min, max, step = 1, suffix = '', format, onChange }: { label: string; value: number; min: number; max: number; step?: number; suffix?: string; format?: (value: number) => string; onChange: (value: number) => void }) {
+  return <label className="lab-slider"><span>{label}</span><input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} aria-label={label} /><output>{format ? format(value) : `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`}</output></label>;
+}
+const formatHour = (hour: number) => `${String(Math.floor(hour)).padStart(2, '0')}:${String(Math.round((hour % 1) * 60)).padStart(2, '0')}`;
+
+function DayStage({ time, split, onSplit }: { time: number; split: number; onSplit: (value: number) => void }) {
+  const t = useLabCopy();
+  const areaRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const nightOpacity = Math.max(0, Math.min(1, (time - 16.5) / 2.5));
+  const update = useCallback((clientX: number) => {
+    const rect = areaRef.current?.getBoundingClientRect();
+    if (rect) onSplit(Math.max(0.04, Math.min(0.96, (clientX - rect.left) / rect.width)));
+  }, [onSplit]);
+  useEffect(() => {
+    const move = (event: PointerEvent) => { if (dragging.current) update(event.clientX); };
+    const up = () => { dragging.current = false; };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+  }, [update]);
+  return <div className="lab-day-stage" ref={areaRef} onPointerDown={event => { if ((event.target as HTMLElement).closest('.lab-day-divider')) { dragging.current = true; update(event.clientX); } }}>
+    <img src={asset('day')} alt="" className="lab-scene-photo" />
+    <div className="lab-day-night-layer" style={{ clipPath: `inset(0 0 0 ${split * 100}%)`, opacity: nightOpacity }}><img src={asset('night')} alt="" className="lab-scene-photo" /></div>
+    <div className="lab-day-divider" style={{ left: `${split * 100}%` }}>
+      <button type="button" role="slider" aria-label={t('昼夜对比位置')} aria-valuemin={4} aria-valuemax={96} aria-valuenow={Math.round(split * 100)} tabIndex={0}
+        onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); onSplit(Math.max(0.04, Math.min(0.96, split + (event.key === 'ArrowRight' ? 0.05 : -0.05)))); } }}>
+        ‹ ›
+      </button>
+    </div>
+  </div>;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = src;
+  });
+}
 
 export default function Lab() {
   const t = useLabCopy();
-  const { language } = useLanguage();
+  const { language, pick } = useLanguage();
   const [params, setParams] = useSearchParams();
-  const rawMode = params.get('mode');
-  const activeMode: LabModuleId =
-    rawMode === 'pixel' || rawMode === 'day' || rawMode === 'color' || rawMode === 'wave'
-      ? rawMode
-      : 'field';
-
-  const [state, dispatch] = useReducer(fullLabReducer, {
-    ...initialFullLabState,
-    activeModule: activeMode
-  });
-
-  const waveResetRef = useRef<(() => void) | null>(null);
-  const waveSectionRef = useRef<HTMLElement>(null);
-  const [waveReady, setWaveReady] = useState(false);
-  const [supported, setSupported] = useState<boolean | null>(null);
-  const [reduced, setReduced] = useState(false);
-  const [copiedNote, setCopiedNote] = useState(false);
-
-  const stageFieldRef = useRef<HTMLDivElement>(null);
-  const stagePixelRef = useRef<HTMLDivElement>(null);
-  const stageColorRef = useRef<HTMLDivElement>(null);
-
-  const activeField = useActivity(stageFieldRef);
-  const activePixel = useActivity(stagePixelRef);
-  const activeColor = useActivity(stageColorRef);
-
+  const raw = params.get('mode');
+  // The static /lab HTML is rendered for the default mode; match it during hydration.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  const mode = hydrated && (raw === 'day' || raw === 'wave' || raw === 'chroma' || raw === 'lightform' || raw === 'photo') ? raw : 'day';
   useEffect(() => {
-    setSupported(canWebGL());
-    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (hydrated && raw && !modules.some(item => item.id === raw)) {
+      const next = new URLSearchParams(params); next.set('mode', 'day');
+      setParams(next, { replace: true, preventScrollReset: true });
+    }
+  }, [hydrated, raw, params, setParams]);
+  const module = modules.find(item => item.id === mode)!;
+  const [state, dispatch] = useReducer(fullLabReducer, initialFullLabState);
+  const [chromaSession, setChromaSession] = useState<ChromaSession>(initialChromaSession);
+  const [mediaSession] = useState(() => new LabMediaSession());
+  useEffect(() => () => mediaSession.dispose(), [mediaSession]);
+  useEffect(() => { mediaSession.setActive(mode === 'lightform' || mode === 'photo'); }, [mode, mediaSession]);
+  const chromaSessionRef = useRef(chromaSession);
+  chromaSessionRef.current = chromaSession;
+  useEffect(() => () => {
+    chromaSessionRef.current.images.forEach(image => URL.revokeObjectURL(image.url));
+  }, []);
+  const [reduced, setReduced] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [demo, setDemo] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const active = useActivity(stageRef);
+  const onWaveSettingsChange = useCallback((patch: Partial<FluidLightState>) => {
+    if (patch.palette !== undefined) dispatch({ type: 'WAVE_SET_PALETTE', value: patch.palette });
+    if (patch.customColors !== undefined) dispatch({ type: 'WAVE_SET_COLORS', value: patch.customColors });
+    if (patch.particleCount !== undefined) dispatch({ type: 'WAVE_SET_COUNT', value: patch.particleCount });
+    if (patch.inputMode !== undefined) dispatch({ type: 'WAVE_SET_MODE', value: patch.inputMode });
+    if (patch.gravity !== undefined) dispatch({ type: 'WAVE_SET_GRAVITY', value: patch.gravity });
+    if (patch.viscosity !== undefined) dispatch({ type: 'WAVE_SET_VISCOSITY', value: patch.viscosity });
+    if (patch.particleRadius !== undefined) dispatch({ type: 'WAVE_SET_RADIUS', value: patch.particleRadius });
+    if (patch.paused !== undefined) dispatch({ type: 'WAVE_SET_PAUSED', value: patch.paused });
   }, []);
 
+  useEffect(() => { dispatch({ type: 'SET_MODULE', value: mode }); setDemo(false); }, [mode]);
   useEffect(() => {
-    const section = waveSectionRef.current;
-    if (!section || waveReady) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting) {
-          setWaveReady(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '300px 0px' }
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, [waveReady]);
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduced(query.matches);
+    sync(); query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+  useEffect(() => { if (reduced || !active) setDemo(false); }, [reduced, active]);
+  useEffect(() => {
+    if (!demo || !active || reduced || mode !== 'day') return;
+    const interval = window.setInterval(() => {
+      dispatch({ type: 'DAYNIGHT_SET_TIME', value: state.dayNight.time >= 24 ? 6 : state.dayNight.time + 0.24 });
+    }, 70);
+    return () => window.clearInterval(interval);
+  }, [demo, active, reduced, mode, state.dayNight.time]);
 
-  const switchModule = useCallback(
-    (id: LabModuleId) => {
-      dispatch({ type: 'SET_MODULE', value: id });
-      const next = new URLSearchParams(params);
-      next.set('mode', id);
-      setParams(next, { preventScrollReset: true });
-      const el = document.getElementById(`lab-${id}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    },
-    [params, setParams]
-  );
-
-  // Capture Screenshot functionality for Guide step 4
-  const captureScreenshot = useCallback(() => {
-    try {
-      const canvases = document.querySelectorAll('canvas');
-      if (canvases.length > 0) {
-        // Find visible canvas with preserveDrawingBuffer
-        const targetCanvas = Array.from(canvases).find(
-          c => c.width > 300 && c.height > 200
-        ) || canvases[0];
-
-        const url = targetCanvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `TJAD-LightLab-${state.activeModule}-${Date.now()}.png`;
-        a.click();
-        setCopiedNote(true);
-        setTimeout(() => setCopiedNote(false), 3000);
-      }
-    } catch {
-      setCopiedNote(true);
-      setTimeout(() => setCopiedNote(false), 3000);
-    }
-  }, [state.activeModule]);
-
-  // Direction joystick in 01 Light Field
-  const handleJoystickMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
-    const y = Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1));
-    dispatch({ type: 'FIELD_SET_ANGLE', value: [x, y] });
+  const switchMode = (nextMode: LabModuleId) => {
+    if (mode === 'wave' && nextMode !== 'wave') dispatch({ type: 'WAVE_SET_MODE', value: 'mouse' });
+    const next = new URLSearchParams(params); next.set('mode', nextMode);
+    setParams(next, { preventScrollReset: true });
+    setHelpOpen(false);
   };
-
-  return (
-    <div className="light-lab-page">
-      {/* Top Header Hero with Celestial Sun Arc */}
-      <section className="lab-hero-celestial">
-        <div className="lab-hero-inner">
-          <div className="lab-hero-branding">
-            <span className="lab-tagline-top">TJAD ARCHITECTURAL LIGHTING</span>
-            <span className="lab-index-indicator">05 / INTERACTIVE</span>
-            <h1 className="lab-main-title">
-              LIGHT LAB
-              {language === 'zh' && <span>光的实验室</span>}
-            </h1>
-            <p className="lab-hero-intro">{t("在这里，你可以亲手探索光与建筑的关系。通过交互实验，直观理解光如何塑造空间、激活立面、营造场景。")}</p>
-            <div className="lab-hero-meta">Explore. Adjust. Experience.</div>
-          </div>
-
-          {/* Celestial Sun Arc Interactive Visualization */}
-          <div className="lab-sun-arc-center">
-            <div className="sun-arc-backdrop">
-              <img
-                src="/assets/brand/hero.webp"
-                alt={t("建筑与光环境背景")}
-                className="arc-building-bg"
-              />
-              <svg
-                className="celestial-arc-svg"
-                viewBox="0 0 500 240"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  d="M 40 220 Q 250 -30 460 220"
-                  stroke="rgba(255, 255, 255, 0.28)"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 4"
-                />
-              </svg>
-
-              {/* Draggable Sun Disc on the Arc */}
-              <div
-                className="sun-disc-handle"
-                style={{
-                  left: `${((state.lightField.time - 6) / 12) * 84 + 8}%`,
-                  top: `${Math.pow(((state.lightField.time - 12) / 6), 2) * 58 + 14}%`
-                }}
-                title={t("日照太阳位置")}
-              >
-                <div className="sun-pulse" />
-                <div className="sun-core" />
-              </div>
-            </div>
-
-            {/* Quick Navigation Anchor Tabs */}
-            <nav className="lab-arc-nav" aria-label={t("实验快捷导航")}>
-              {modules.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`arc-nav-item ${state.activeModule === m.id ? 'active' : ''}`}
-                  onClick={() => switchModule(m.id)}
-                >
-                  <span className="nav-num">{m.num}</span>
-                  <span className="nav-title">{m.en}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="lab-hero-motto">
-            <p>{t("光，")}<br />{t("让建筑更有生命力。")}</p>
-            <small>LIGHT GIVES ARCHITECTURE LIFE.</small>
-            <div className="scroll-hint">
-              <span>SCROLL TO EXPLORE</span>
-              <div className="scroll-pill" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main 4-Experiment Grid Dashboard */}
-      <main className="lab-dashboard-grid">
-        {/* Module 01: LIGHT FIELD */}
-        <section id="lab-field" className="lab-card card-field">
-          <div className="card-header">
-            <div className="card-titles">
-              <h2>
-                <span className="card-num">01</span> LIGHT FIELD{' '}
-                {language === 'zh' && <small>实时光场</small>}
-              </h2>
-              <p>{t("调整光源参数，或移动指针在立面上探索局部光束。")}</p>
-            </div>
-            <button
-              type="button"
-              className="lab-reset-btn"
-              onClick={() => dispatch({ type: 'RESET_FIELD' })}
-              title={t("重置光场参数")}
-            >
-              Reset ↺
-            </button>
-          </div>
-
-          <div className="card-viewport-wrap" ref={stageFieldRef}>
-            {supported === true ? (
-              <Suspense
-                fallback={
-                  <img
-                    className="lab-poster"
-                    src="/assets/brand/lab.webp"
-                    alt={t("建筑光场静态预览")}
-                  />
-                }
-              >
-                <Scene
-                  mode="field"
-                  state={state}
-                  active={activeField}
-                  reduced={reduced}
-                  onLost={() => setSupported(false)}
-                />
-              </Suspense>
-            ) : (
-              <img
-                className="lab-poster"
-                src="/assets/brand/lab.webp"
-                alt={t("建筑光场静态预览")}
-              />
-            )}
-
-            {/* Left Vertical Lighting Tools */}
-            <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("光源类型切换")}>
-              {(
-                [
-                  ['sun', t("太阳光"), '☀'],
-                  ['artificial', t("人工光"), '⚿'],
-                  ['ambient', t("环境光"), '◈'],
-                  ['model', t("模型切换"), '⬡']
-                ] as [LightSourceType, string, string][]
-              ).map(([type, label, icon]) => (
-                <button
-                  key={type}
-                  type="button"
-                  className={`toolbar-btn ${
-                    state.lightField.lightType === type ? 'active' : ''
-                  }`}
-                  onClick={() => dispatch({ type: 'FIELD_SET_LIGHT_TYPE', value: type })}
-                  title={label}
-                  aria-pressed={state.lightField.lightType === type}
-                >
-                  <span className="btn-icon">{icon}</span>
-                  <span className="btn-label">{label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Bottom Timeline Slider (06:00 - 18:00) & Compass Joystick */}
-            <div className="viewport-overlay-bottom">
-              <div className="field-timeline-row">
-                <span className="time-boundary">06:00</span>
-                <input
-                  type="range"
-                  min="6"
-                  max="18"
-                  step="0.1"
-                  value={state.lightField.time}
-                  onChange={e =>
-                    dispatch({
-                      type: 'FIELD_SET_TIME',
-                      value: parseFloat(e.target.value)
-                    })
-                  }
-                  aria-label={t("日照时间轴")}
-                  className="field-timeline-slider"
-                />
-                <span className="time-boundary">18:00</span>
-                <span className="current-time-badge">
-                  {String(Math.floor(state.lightField.time)).padStart(2, '0')}:
-                  {String(Math.round((state.lightField.time % 1) * 60)).padStart(2, '0')}
-                </span>
-              </div>
-
-              {/* Direction Joystick Indicator */}
-              <div
-                className="compass-joystick"
-                title={t("拖动调整光源方位")}
-                onPointerMove={e => {
-                  if (e.buttons === 1) handleJoystickMove(e);
-                }}
-                onPointerDown={handleJoystickMove}
-              >
-                <div className="compass-cross" />
-                <div
-                  className="compass-knob"
-                  style={{
-                    left: `${(state.lightField.angle[0] * 0.5 + 0.5) * 100}%`,
-                    top: `${(state.lightField.angle[1] * 0.5 + 0.5) * 100}%`
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="card-features">
-            <h4>{t("功能亮点：")}</h4>
-            <ul>
-              <li>{t("• 拖动时间轴，模拟日照角度与光影变化")}</li>
-              <li>{t("• 调整光源强度、色温、方向")}</li>
-              <li>{t("• 支持不同建筑模型（简约模型 / 场馆 / 街区）")}</li>
-              <li>{t("• 实时渲染光影与材质反射")}</li>
-              <li>{t("• 移动指针，观察局部光束如何改变立面明暗")}</li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Module 02: PIXEL FACADE */}
-        <section id="lab-pixel" className="lab-card card-pixel">
-          <div className="card-header">
-            <div className="card-titles">
-              <h2>
-                <span className="card-num">02</span> PIXEL FACADE{' '}
-                {language === 'zh' && <small>像素立面</small>}
-              </h2>
-              <p>{t("用像素化灯光，探索建筑立面的动态表达。")}</p>
-            </div>
-            <button
-              type="button"
-              className="lab-reset-btn"
-              onClick={() => dispatch({ type: 'RESET_PIXEL' })}
-              title={t("重置像素立面参数")}
-            >
-              Reset ↺
-            </button>
-          </div>
-
-          <div className="card-viewport-wrap" ref={stagePixelRef}>
-            {supported === true ? (
-              <Suspense fallback={<div className="lab-loading">{t("加载立面模型...")}</div>}>
-                <Scene
-                  mode="pixel"
-                  state={state}
-                  active={activePixel}
-                  reduced={reduced}
-                  onLost={() => setSupported(false)}
-                />
-              </Suspense>
-            ) : (
-              <div className="lab-poster-fallback">{t("像素立面需 WebGL 支持")}</div>
-            )}
-
-            {/* Left Pattern Selection Toolbar */}
-            <div className="viewport-toolbar-vertical" role="toolbar" aria-label={t("立面动态效果选择")}>
-              {(
-                [
-                  ['wave', t("波浪"), '∿'],
-                  ['ripple', t("涟漪"), '◎'],
-                  ['flow', t("流动"), '⫸'],
-                  ['pattern', t("图案"), '▱'],
-                  ['text', t("文字"), 'T']
-                ] as [PixelPatternType, string, string][]
-              ).map(([pat, label, icon]) => (
-                <button
-                  key={pat}
-                  type="button"
-                  className={`toolbar-btn ${
-                    state.pixelFacade.pattern === pat ? 'active' : ''
-                  }`}
-                  onClick={() => dispatch({ type: 'PIXEL_SET_PATTERN', value: pat })}
-                  title={label}
-                  aria-pressed={state.pixelFacade.pattern === pat}
-                >
-                  <span className="btn-icon">{icon}</span>
-                  <span className="btn-label">{label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Bottom 5 Thumbnails Presets Bar */}
-            <div className="viewport-overlay-bottom pixel-bottom-bar">
-              <div className="pattern-presets-row">
-                {(
-                  [
-                    ['wave', t("波浪")],
-                    ['ripple', t("涟漪")],
-                    ['flow', t("流动")],
-                    ['pattern', t("晶格")],
-                    ['text', 'TJAD']
-                  ] as [PixelPatternType, string][]
-                ).map(([pat, name]) => (
-                  <button
-                    key={pat}
-                    type="button"
-                    className={`preset-thumb-btn ${
-                      state.pixelFacade.pattern === pat ? 'selected' : ''
-                    }`}
-                    onClick={() => dispatch({ type: 'PIXEL_SET_PATTERN', value: pat })}
-                  >
-                    <span className="thumb-preview" data-pattern={pat} />
-                    <span className="thumb-label">{name}</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className="preset-thumb-btn add-btn"
-                  onClick={() => dispatch({ type: 'PIXEL_TOGGLE_PAUSE' })}
-                  title={state.pixelFacade.paused ? t("播放") : t("暂停")}
-                >
-                  <span>{state.pixelFacade.paused ? '▶' : '❚❚'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-features">
-            <h4>{t("功能亮点：")}</h4>
-            <ul>
-              <li>{t("• 多种动态效果（波浪 / 涟漪 / 流动 / 图案 / 文字）")}</li>
-              <li>{t("• 调整速度、亮度、颜色")}</li>
-              <li>{t("• 支持自定义图案或上传图片")}</li>
-              <li>{t("• 实时在建筑立面模型上预览效果")}</li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Module 03: DAY / NIGHT */}
-        <section id="lab-day" className="lab-card card-daynight">
-          <div className="card-header">
-            <div className="card-titles">
-              <h2>
-                <span className="card-num">03</span> DAY / NIGHT{' '}
-                {language === 'zh' && <small>昼夜切换</small>}
-              </h2>
-              <p>{t("在时间的流动中，感受建筑在不同时段的气质。")}</p>
-            </div>
-          </div>
-
-          <div className="card-viewport-wrap daynight-wrap">
-            <DayNightCompare
-              state={state.dayNight}
-              onChangeTime={t => dispatch({ type: 'DAYNIGHT_SET_TIME', value: t })}
-              onChangeSplit={r => dispatch({ type: 'DAYNIGHT_SET_SPLIT', value: r })}
-            />
-          </div>
-
-          <div className="card-features">
-            <h4>{t("功能亮点：")}</h4>
-            <ul>
-              <li>{t("• 拖动时间轴查看不同时段的照明效果")}</li>
-              <li>{t("• 对比日景 / 黄昏 / 夜景的氛围")}</li>
-              <li>{t("• 可查看关键时段的灯光策略")}</li>
-              <li>{t("• 支持多个建筑案例场景切换")}</li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Module 04: COLOR STUDIO */}
-        <section id="lab-color" className="lab-card card-color">
-          <div className="card-header">
-            <div className="card-titles">
-              <h2>
-                <span className="card-num">04</span> COLOR STUDIO{' '}
-                {language === 'zh' && <small>光色实验室</small>}
-              </h2>
-              <p>{t("探索不同光色如何改变空间情绪。")}</p>
-            </div>
-          </div>
-
-          <div className="card-viewport-wrap color-studio-wrap" ref={stageColorRef}>
-            {/* 3D Visual showing the room tinted by the selected light */}
-            <div className="color-preview-stage">
-              {supported === true ? (
-                <Suspense fallback={<div className="lab-loading">{t("加载光色空间...")}</div>}>
-                  <Scene
-                    mode="color"
-                    state={state}
-                    active={activeColor}
-                    reduced={reduced}
-                    onLost={() => setSupported(false)}
-                  />
-                </Suspense>
-              ) : (
-                <div className="lab-poster-fallback">{t("光色实验需 WebGL 支持")}</div>
-              )}
-            </div>
-
-            {/* 4 Spatial Presets Cards */}
-            <div className="color-presets-row" role="group" aria-label={t("选择空间光色预设")}>
-              {(
-                [
-                  ['warm3000', t("暖光 3000K"), '#ffba6b', t("温馨 · 沉静 · 亲和")],
-                  ['neutral4000', t("中性光 4000K"), '#fff4d6', t("明朗 · 纯净 · 商务")],
-                  ['cool6000', t("冷白光 6000K"), '#d8f0ff', t("高效 · 现代 · 通透")],
-                  ['rgb', t("彩色光"), '#ba7bff', t("艺术 · 戏剧 · 沉浸")]
-                ] as [ColorPresetType, string, string, string][]
-              ).map(([key, name, color, tag]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`color-preset-card ${
-                    state.colorStudio.preset === key ? 'active' : ''
-                  }`}
-                  onClick={() => dispatch({ type: 'COLOR_SET_PRESET', value: key })}
-                  aria-pressed={state.colorStudio.preset === key}
-                >
-                  <div
-                    className="preset-swatch-bar"
-                    style={{ backgroundColor: color }}
-                  />
-                  <strong>{name}</strong>
-                  <small>{tag}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="card-features">
-            <h4>{t("功能亮点：")}</h4>
-            <ul>
-              <li>{t("• 调整色温与颜色")}</li>
-              <li>{t("• 预设不同场景（展厅 / 办公 / 公共空间）")}</li>
-              <li>{t("• 观察空间氛围变化")}</li>
-              <li>{t("• 支持导出对比图")}</li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Module 05: FLUID LIGHT / 流光粒子 */}
-        <section id="lab-wave" className="lab-card card-wave" ref={waveSectionRef}>
-          <div className="card-header">
-            <div className="card-titles">
-              <h2>
-                <span className="card-num">05</span> FLUID LIGHT{' '}
-                {language === 'zh' && <small>流光粒子</small>}
-              </h2>
-              <p>{t("基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。")}</p>
-            </div>
-            <button
-              type="button"
-              className="lab-reset-btn"
-              onClick={() => {
-                waveResetRef.current?.();
-                dispatch({ type: 'RESET_WAVE' });
-              }}
-              title={t("重置流光粒子参数")}
-            >
-              Reset ↺
-            </button>
-          </div>
-
-          {waveReady ? (
-            <Suspense fallback={<div className="card-viewport-wrap lab-loading">{t("加载 WebGPU 流光引擎...")}</div>}>
-              <FluidLightCanvas
-                initialPalette={state.fluidLight.palette}
-                onResetRequested={fn => {
-                  waveResetRef.current = fn;
-                }}
-              />
-            </Suspense>
-          ) : (
-            <div className="card-viewport-wrap">
-              <img className="lab-poster" src="/assets/brand/lab.webp" alt={t("流光粒子静态预览")} loading="lazy" />
-            </div>
-          )}
-
-          <div className="card-features">
-            <h4>{t("功能亮点：")}</h4>
-            <ul>
-              <li>{t("• WebGPU GPU Compute 并行计算 3,000+ 流光微粒动力学")}</li>
-              <li>{t("• 鼠标光标漫游向心吸附，右键释放推散光浪")}</li>
-              <li>{t("• MediaPipe AI 隔空手势感知：食指导引流光、捏合手势推散冲击波")}</li>
-              <li>{t("• 4 组建筑级色温调色板（暖金 3000K / 极光冷白 6000K / 双色温 / 日光白）")}</li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Bottom Right: User Workflow Guide */}
-        <section className="lab-card card-guide">
-          <div className="card-header">
-            <h3>{t("使用指引")}</h3>
-            {copiedNote && (
-              <span className="copied-toast" aria-live="polite">{t("✓ 实验画面已截取保存！")}</span>
-            )}
-          </div>
-
-          <div className="guide-steps-grid">
-            <div className="guide-step">
-              <span className="step-num">{t("1 选择模式")}</span>
-              <div className="step-icon">⊞</div>
-              <p>{t("选择一个实验模块")}</p>
-            </div>
-
-            <div className="guide-step-arrow">→</div>
-
-            <div className="guide-step">
-              <span className="step-num">{t("2 调整参数")}</span>
-              <div className="step-icon">🎛</div>
-              <p>{t("通过鼠标或触控调整光源 / 效果")}</p>
-            </div>
-
-            <div className="guide-step-arrow">→</div>
-
-            <div className="guide-step">
-              <span className="step-num">{t("3 观察变化")}</span>
-              <div className="step-icon">👁</div>
-              <p>{t("实时查看建筑的光影与氛围")}</p>
-            </div>
-
-            <div className="guide-step-arrow">→</div>
-
-            <div
-              className="guide-step step-clickable"
-              onClick={captureScreenshot}
-              title={t("点击截取保存当前画面")}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && captureScreenshot()}
-            >
-              <span className="step-num">{t("4 保存分享")}</span>
-              <div className="step-icon">📷</div>
-              <p>{t("截取画面，分享你的光影实验")}</p>
-            </div>
-          </div>
-
-          <div className="guide-footer">
-            <TextLink to="/work">{t("浏览精选作品工程档案")}</TextLink>
-          </div>
-        </section>
-      </main>
+  const reset = () => {
+    setDemo(false);
+    if (mode === 'day') { dispatch({ type: 'DAYNIGHT_SET_TIME', value: 19.5 }); dispatch({ type: 'DAYNIGHT_SET_SPLIT', value: 0.62 }); }
+    if (mode === 'wave') dispatch({ type: 'RESET_WAVE' });
+  };
+  const capture = async () => {
+    try {
+      const canvas = document.createElement('canvas'); canvas.width = 1920; canvas.height = 1080;
+      const context = canvas.getContext('2d'); if (!context) throw new Error('Canvas unavailable');
+      const drawCover = (image: HTMLImageElement) => {
+        const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+        const w = image.width * scale, h = image.height * scale;
+        context.drawImage(image, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      };
+      drawCover(await loadImage(asset(module.image!)));
+      context.filter = 'none';
+      if (mode === 'day') {
+        const night = await loadImage(asset('night'));
+        context.save(); context.beginPath(); context.rect(canvas.width * state.dayNight.splitRatio, 0, canvas.width, canvas.height); context.clip();
+        context.globalAlpha = Math.max(0, Math.min(1, (state.dayNight.time - 16.5) / 2.5)); drawCover(night); context.restore();
+      }
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Image encode failed');
+      const url = URL.createObjectURL(blob); const link = document.createElement('a');
+      link.href = url; link.download = `TJAD-Light-Lab-${mode}.png`; link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(t('实验画面已保存'));
+    } catch { setMessage(t('保存失败，请重试')); }
+    window.setTimeout(() => setMessage(''), 6000);
+  };
+  return <div className="lab-workbench" data-mode={mode}>
+    <nav className="lab-rail" aria-label={t('实验模块')}>
+      <div className="lab-rail-list">{modules.map(item => <button key={item.id} type="button" data-module={item.id} className={`lab-rail-item ${mode === item.id ? 'is-active' : ''}`} aria-current={mode === item.id ? 'page' : undefined} onClick={() => switchMode(item.id)}>
+        <span className="lab-rail-node" aria-hidden="true" /><span className="lab-rail-number">{item.num}</span><span className="lab-rail-label" lang={language === 'zh' ? 'zh-CN' : 'en'}>{pick(item.zh, item.en)}</span>
+      </button>)}</div>
+      <div className="lab-rail-footer">{pick('探索', 'EXPLORE')}<br />{pick('调整', 'ADJUST')}<br />{pick('体验', 'EXPERIENCE')}</div>
+    </nav>
+    <div className="lab-stage" ref={stageRef}>
+      {mode === 'chroma' || mode === 'lightform' || mode === 'photo' || mode === 'wave' ? <Suspense fallback={<div className="lab-import-loading" role="status">{t('正在加载实验…')}</div>}>
+        {mode === 'chroma' ? <ChromaField key="chroma" session={chromaSession} setSession={setChromaSession} /> : mode === 'lightform' ? <LightformStudio key="lightform" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} /> : mode === 'photo' ? <PhotoStudio key="photo" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} /> : <FluidLightCanvas key="wave" initialSettings={{ ...state.fluidLight, paused: reduced || state.fluidLight.paused }} reducedMotion={reduced} onSettingsChange={onWaveSettingsChange} />}
+      </Suspense> : <>
+      <DayStage time={state.dayNight.time} split={state.dayNight.splitRatio} onSplit={value => dispatch({ type: 'DAYNIGHT_SET_SPLIT', value })} />
+      <div className="lab-stage-shade" aria-hidden="true" />
+      <div className="lab-stage-copy">
+        <span className="lab-overline">TJAD ARCHITECTURAL LIGHTING</span>
+        <span className="lab-index">{module.num} / INTERACTIVE</span>
+        <h1>{module.heading}</h1>
+        <h2>{language === 'zh' ? module.zh : t(module.zh)}</h2>
+        <p>{t(module.description)}</p>
+        <span className="lab-caption">EXPLORE. ADJUST. EXPERIENCE.</span>
+      </div>
+      <div className="lab-stage-actions">
+        <button type="button" onClick={reset}>{t('重置')}</button>
+        <button type="button" aria-expanded={helpOpen} aria-controls="lab-help" onClick={() => setHelpOpen(open => !open)}>{t('使用指引')} <span aria-hidden="true">↗</span></button>
+      </div>
+      {helpOpen && <aside id="lab-help" className="lab-help" aria-label={t('使用指引')}>
+        <button type="button" className="lab-help-close" onClick={() => setHelpOpen(false)} aria-label={t('关闭说明')}>×</button>
+        <span className="lab-overline">LIGHT LAB / GUIDE</span><h3>{t('使用指引')}</h3>
+        <ol><li>{t('选择左侧实验模块')}</li><li>{t('调整底部参数并观察场景变化')}</li><li>{t('拖动昼夜分割线或在场景中移动指针')}</li></ol>
+        <p>{t('概念场景用于交互研究，不代表实际项目。')}</p>
+        <button type="button" className="lab-save" onClick={capture}>{t('保存当前实验画面')} ↗</button>
+        {message && <div role="status" className="lab-message">{message}</div>}
+      </aside>}
+      <div className="lab-console" aria-label={t('实验控制台')}>
+        {mode === 'day' && <>
+          <div className="lab-console-primary"><div className="lab-choice-row">{([['白天', 12], ['黄昏', 17.5], ['夜晚', 20]] as const).map(([label, time]) => <Choice key={label} selected={Math.abs(state.dayNight.time - time) < 0.6} onClick={() => dispatch({ type: 'DAYNIGHT_SET_TIME', value: time })}>{t(label)}</Choice>)}<Choice selected={demo} onClick={() => setDemo(value => !value)}>{t('动态演示')}</Choice></div>
+            <Slider label={t('昼夜时间轴')} value={state.dayNight.time} min={6} max={24} step={0.25} format={formatHour} onChange={value => dispatch({ type: 'DAYNIGHT_SET_TIME', value })} />
+            <div className="lab-timeline-ticks"><span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>24:00</span></div>
+          </div><div className="lab-console-secondary"><span className="lab-console-label">{t('场景预设')}</span><div className="lab-preset-row">{([['白天', 12, 'day', 'none'], ['黄昏', 17.5, 'day', 'sepia(.35) saturate(1.2) brightness(.8)'], ['夜晚', 20, 'night', 'none'], ['深夜', 24, 'night', 'brightness(.65)']] as const).map(([label, time, image, filter]) => <Choice key={label} className="lab-preset" selected={Math.abs(state.dayNight.time - time) < 0.6} onClick={() => dispatch({ type: 'DAYNIGHT_SET_TIME', value: time })}><img src={asset(image)} alt="" style={{ filter }} /><span>{t(label)}</span></Choice>)}</div></div>
+          <button type="button" className="lab-play" aria-pressed={demo} disabled={reduced} onClick={() => setDemo(value => !value)}><span>{demo ? 'Ⅱ' : '▶'}</span>{t(demo ? '暂停演示' : '对比播放')}</button>
+        </>}
+      </div>
+      </>}
     </div>
-  );
+  </div>;
 }
