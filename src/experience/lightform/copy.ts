@@ -1,6 +1,20 @@
 import { useLanguage } from '../../language';
 
 const english: Record<string, string> = {
+  '粒子流场实时交互预览': 'Particle Field live interactive preview',
+  '粒子流场实时画面': 'Particle Field Live',
+  '使用粒子流场实时画面': 'Use Particle Field Live',
+  '隐藏粒子流场预览': 'Hide Particle Field preview',
+  '显示粒子流场预览': 'Show Particle Field preview',
+  '正在启动粒子画面…': 'Starting particle artwork…',
+  '五种粒子效果 · 与粒子流场实验共享参数和动画': 'Five effects · Shared controls and continuous animation',
+  '建筑操作模式': 'Building interaction mode',
+  '旋转视角': 'Rotate view', '粒子交互': 'Particle interaction',
+  '原始效果请使用浮窗圆盘控制': 'Use the preview pad to control Classic',
+  '浮窗与建筑显示区可实时控制粒子': 'Control particles in the preview or on the building',
+  '移动指针扰动 · 按住吸引': 'Move to disturb · Hold to attract',
+  '粒子流场实时串流': 'Particle Field live stream',
+
   '图片建筑光影测试': 'Photo architectural lighting test', '固定视角的建筑图片预览': 'Fixed-view architectural photo preview',
   '正在加载固定视角图片…': 'Loading the fixed-view photo…', '固定视角 · 图片光影测试': 'FIXED VIEW · PHOTO LIGHT LAB',
   '原图暖色灯光': 'Original warm lighting', '在建筑显示区拖动吸引 · 右键推散': 'Drag on the facade to attract · Right-click to scatter',

@@ -4,7 +4,7 @@
  * and state management for all 4 lighting experiment modules.
  */
 
-export type LabModuleId = 'field' | 'pixel' | 'day' | 'color' | 'wave' | 'chroma' | 'lightform' | 'photo';
+export type LabModuleId = 'field' | 'pixel' | 'day' | 'color' | 'wave' | 'chroma' | 'lightform' | 'photo' | 'particles';
 
 export type PixelPatternType = 'wave' | 'ripple' | 'flow' | 'pattern' | 'text';
 

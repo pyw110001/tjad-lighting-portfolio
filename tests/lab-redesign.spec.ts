@@ -8,28 +8,28 @@ test.describe('Light Lab workbench', () => {
     await page.goto('/lab?mode=lightform');
     await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'lightform');
     const railLabels = page.locator('.lab-rail-label');
-    await expect(railLabels).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '建筑光影模拟', '测试项']);
+    await expect(railLabels).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '粒子流场', '建筑光影模拟', '测试项']);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await expect(page.locator('.site-header')).toHaveCSS('position', 'fixed');
     expect((await page.locator('.site-header').boundingBox())?.y).toBe(0);
 
     await page.getByRole('button', { name: '切换为英文' }).first().click();
-    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Lightform Studio', 'Photo Lab']);
+    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Particle Field', 'Lightform Studio', 'Photo Lab']);
     await expect(page.locator('.lab-rail-footer')).toContainText('EXPLORE');
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Lightform Studio', 'Photo Lab']);
+    await expect(railLabels).toHaveText(['Day / Night', 'Fluid Light', 'Chroma Field', 'Particle Field', 'Lightform Studio', 'Photo Lab']);
     await page.getByRole('button', { name: 'Switch to Chinese' }).first().click();
     await expect(railLabels.first()).toHaveText('昼夜切换');
     await expect(page.locator('.lab-rail-footer')).toContainText('探索');
   });
 
-  test('shows one scene, five rail entries and a usable console at 1440px', async ({ page }, testInfo) => {
+  test('shows one scene, six rail entries and a usable console at 1440px', async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/lab');
-    await expect(page.locator('.lab-rail-item')).toHaveCount(5);
+    await expect(page.locator('.lab-rail-item')).toHaveCount(6);
     await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'day');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('DAY / NIGHT');
     await expect(page.locator('.lab-scene-photo').first()).toHaveAttribute('src', '/assets/light-lab/scenes/day.webp');
@@ -46,8 +46,8 @@ test.describe('Light Lab workbench', () => {
       await page.goto(`/lab?mode=${mode}`);
       await expect(page).toHaveURL(/mode=day/);
       await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'day');
-      await expect(page.locator('.lab-rail-label')).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '建筑光影模拟', '测试项']);
-      await expect(page.locator('.lab-rail-number')).toHaveText(['01', '02', '03', '04', '05']);
+      await expect(page.locator('.lab-rail-label')).toHaveText(['昼夜切换', '流光粒子', '色彩粒子场', '粒子流场', '建筑光影模拟', '测试项']);
+      await expect(page.locator('.lab-rail-number')).toHaveText(['01', '02', '03', '04']);
     }
   });
 

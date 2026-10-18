@@ -1,6 +1,11 @@
 import { useLanguage } from '../language';
 
 export const labEnglish: Record<string, string> = {
+  '粒子流场': 'Particle Field',
+  '用五种粒子流场探索聚散与动静，并实时展示到建筑。': 'Explore five particle fields and display them live on architecture.',
+  '在三座建筑场景中展示媒体与实时粒子的灯光表达。': 'Display media and live particle effects across three architectural scenes.',
+  '用固定视角夜景图片展示媒体与实时粒子的建筑表达。': 'Display media and live particles on fixed-view architectural photographs.',
+
   '测试项': 'Photo Lab', '用固定视角夜景图片，预演素材与实时粒子的建筑表达。': 'Preview media and live particles on fixed-view architectural night photographs.',
   '色彩粒子场': 'Chroma Field',
   '建筑光影模拟': 'Lightform Studio',

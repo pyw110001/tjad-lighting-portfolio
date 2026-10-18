@@ -7,7 +7,3 @@
 .photo-studio .live-preview { width: 285px; }
 .photo-studio .live-preview-canvas { height: 158px; }
 .lab-workbench[data-mode="photo"] .lab-stage { min-height: 550px; }
-@media (min-width: 1101px) {
-  .lab-rail-list { gap: 22px; }
-  .lab-rail-item { min-height: 86px; }
-}

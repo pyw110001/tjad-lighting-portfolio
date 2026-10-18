@@ -13,7 +13,7 @@ test('Photo Lab loads three fixed views without city assets and stops rendering 
   page.on('request', request => requests.push(request.url()));
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/lab?mode=photo'); await ready(page);
-  await expect(page.locator('.lab-rail-label')).toHaveText(['昼夜切换','流光粒子','色彩粒子场','建筑光影模拟','测试项']);
+  await expect(page.locator('.lab-rail-label')).toHaveText(['昼夜切换','流光粒子','色彩粒子场','粒子流场','建筑光影模拟','测试项']);
   const host = page.locator('.photo-studio .canvas-host');
   for (const [id,name] of [['collins','888 Collins'],['facade','弧形点阵展馆'],['sphere','球形展馆']]) {
     await page.getByRole('tab', { name }).click();
@@ -40,12 +40,13 @@ test('Photo media covers all displays, respects the lobby mask, and exports its 
   const bands = await sharp(Buffer.from(svg)).png().toBuffer();
   await page.goto('/lab?mode=photo'); await ready(page);
   const canvas = page.locator('.photo-compositor');
+  const pixelRatio = await page.evaluate(() => Math.min(window.devicePixelRatio || 1, 2));
   // Read the actual GPU buffer, also used by PNG export. Browser screenshots
   // may still contain the preceding compositor frame after a scene switch.
   const readFrame = async () => sharp(Buffer.from((await canvas.evaluate(node => (node as HTMLCanvasElement).toDataURL('image/png'))).split(',')[1], 'base64')).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const lobbyFrames = new Map<string, number[]>();
   const lobbyPixels = (data: Buffer, info: { width: number; height: number; channels: number }, id: string) => {
-    const scale=Math.min(info.width/1672,(info.height-112)/941),left=(info.width-1672*scale)/2,top=74+(info.height-112-941*scale)/2;
+    const scale=Math.min(info.width/1672,(info.height-112*pixelRatio)/941),left=(info.width-1672*scale)/2,top=74*pixelRatio+(info.height-112*pixelRatio-941*scale)/2;
     const point=id==='collins'?[960,690]:id==='facade'?[1100,710]:[959,680];
     const x=Math.round(left+point[0]*scale),y=Math.round(top+point[1]*scale),pixels:number[]=[];
     for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
@@ -70,7 +71,7 @@ test('Photo media covers all displays, respects the lobby mask, and exports its 
     await page.screenshot({ path: testInfo.outputPath(`photo-${id}-bands.png`) });
     let red=0,green=0,blue=0,redY=0,blueY=0;
     for (let y=0;y<info.height;y++) for (let x=0;x<info.width;x++) {
-      const scale=Math.min(info.width/1672,(info.height-112)/941),left=(info.width-1672*scale)/2,top=74+(info.height-112-941*scale)/2;
+      const scale=Math.min(info.width/1672,(info.height-112*pixelRatio)/941),left=(info.width-1672*scale)/2,top=74*pixelRatio+(info.height-112*pixelRatio-941*scale)/2;
       const refX=(x-left)/scale,refY=(y-top)/scale;
       const region=id==='collins'?[857,36,1201,665]:id==='facade'?[609,110,1540,629]:[660,263,1258,644];
       if(refX<region[0]||refX>region[2]||refY<region[1]||refY>region[3])continue;
@@ -190,6 +191,7 @@ test('smooth photo mapping preserves sub-diode image detail in every scene and c
   await page.goto('/lab?mode=photo');await ready(page);
   await page.addStyleTag({content:'.lis-cursor{display:none!important}'});
   const canvas=page.locator('.photo-compositor'),host=page.locator('.photo-studio .canvas-host');
+  const pixelRatio = await page.evaluate(() => Math.min(window.devicePixelRatio || 1, 2));
   const width=2048,height=1152,raw=Buffer.alloc(width*height*3);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
     const i=(y*width+x)*3;raw[i]=32+Math.round(192*(y%64)/63);raw[i+1]=32;raw[i+2]=64;
@@ -213,7 +215,7 @@ test('smooth photo mapping preserves sub-diode image detail in every scene and c
     await page.getByRole('button',{name:'隐藏参数面板'}).click();
     await upload('black.png',black);const baseline=await readFrame();
     await upload('detail.png',pattern);const rendered=await readFrame(),info=rendered.info;
-    const scale=Math.min(info.width/1672,(info.height-112)/941),left=(info.width-1672*scale)/2,top=74+(info.height-112-941*scale)/2;
+    const scale=Math.min(info.width/1672,(info.height-112*pixelRatio)/941),left=(info.width-1672*scale)/2,top=74*pixelRatio+(info.height-112*pixelRatio-941*scale)/2;
     const [refX,y0,y1]=id==='collins'?[1110,420,590]:id==='facade'?[1100,300,480]:[959,500,620];
     const x=Math.round(left+refX*scale);let last:number|null=null,changes=0,samples=0;
     for(let y=Math.ceil(top+y0*scale);y<top+y1*scale;y++){
@@ -225,7 +227,7 @@ test('smooth photo mapping preserves sub-diode image detail in every scene and c
       const cx=Math.round(left+959*scale),cy=Math.round(top+310*scale),index=(cy*info.width+cx)*3;
       expect(rendered.data[index]-baseline.data[index],'upper dome receives uploaded media').toBeGreaterThan(20);
       const bounds=(await canvas.boundingBox())!;
-      await page.mouse.move(bounds.x+cx,bounds.y+cy);await page.mouse.down();
+      await page.mouse.move(bounds.x+cx/pixelRatio,bounds.y+cy/pixelRatio);await page.mouse.down();
       await expect(host).toHaveAttribute('data-pointer-uv',/0\.\d+,0\.\d+/);await page.mouse.up();
     }
     await page.screenshot({path:testInfo.outputPath(`photo-${id}-fine-detail.png`)});

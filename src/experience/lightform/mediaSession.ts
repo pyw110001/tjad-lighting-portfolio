@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { MediaInfo, StoredMedia } from './studioTypes';
 
-export type MediaSource = 'stored' | 'chroma' | 'fluid';
+export type MediaSource = 'stored' | 'chroma' | 'fluid' | 'particles';
 type Snapshot = { media: StoredMedia | null; source: MediaSource; playing: boolean; time: number };
 const empty: Snapshot = { media: null, source: 'stored', playing: false, time: 0 };
 
