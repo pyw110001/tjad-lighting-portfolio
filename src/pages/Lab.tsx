@@ -7,12 +7,14 @@ import { useActivity } from '../experience/useActivity';
 import { useLabCopy } from '../content/lab-en';
 import { initialChromaSession, type ChromaSession } from '../experience/chroma/session';
 import { useLanguage } from '../language';
-import { LabMediaSession } from '../experience/lightform/mediaSession';
+import { ParticleFieldSession, fieldIsActive } from '../experience/particles/session';
+import { LabMediaSession, useMediaSession } from '../experience/lightform/mediaSession';
 import './lab-workbench.css';
 
 const FluidLightCanvas = lazy(() => import('../experience/fluid/FluidLightCanvas'));
 const ChromaField = lazy(() => import('../experience/chroma/App'));
 const LightformStudio = lazy(() => import('../experience/lightform/App'));
+const ParticleField = lazy(() => import('../experience/particles/ParticleField'));
 const PhotoStudio = lazy(() => import('../experience/photo/App'));
 const asset = (name: string) => `/assets/light-lab/scenes/${name}.webp`;
 
@@ -20,8 +22,9 @@ const modules: { id: LabModuleId; num: string; en: string; zh: string; heading: 
   { id: 'day', num: '01', en: 'Day / Night', zh: '昼夜切换', heading: 'DAY / NIGHT', image: 'day', description: '在时间的流动中，感受建筑在不同时段的气质。' },
   { id: 'wave', num: '02', en: 'Fluid Light', zh: '流光粒子', heading: 'FLUID LIGHT', image: 'wave', description: '基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。' },
   { id: 'chroma', num: '03', en: 'Chroma Field', zh: '色彩粒子场', heading: 'CHROMA FIELD', description: '上传图片，用色彩与声音塑造可交互的粒子画面。' },
-  { id: 'lightform', num: '04', en: 'Lightform Studio', zh: '建筑光影模拟', heading: 'LIGHTFORM STUDIO', description: '在三座建筑场景中预演图片与视频的灯光表达。' },
-  { id: 'photo', num: '05', en: 'Photo Lab', zh: '测试项', heading: 'PHOTO LAB', description: '用固定视角夜景图片，预演素材与实时粒子的建筑表达。' }
+  { id: 'particles', num: '04', en: 'Particle Field', zh: '粒子流场', heading: 'PARTICLE FIELD', description: '用五种粒子流场探索聚散与动静，并实时展示到建筑。' },
+  { id: 'lightform', num: '', en: 'Lightform Studio', zh: '建筑光影模拟', heading: 'LIGHTFORM STUDIO', description: '在三座建筑场景中展示媒体与实时粒子的灯光表达。' },
+  { id: 'photo', num: '', en: 'Photo Lab', zh: '测试项', heading: 'PHOTO LAB', description: '用固定视角夜景图片展示媒体与实时粒子的建筑表达。' }
 ];
 
 function Choice({ selected, onClick, children, className = '' }: { selected: boolean; onClick: () => void; children: ReactNode; className?: string }) {
@@ -76,7 +79,7 @@ export default function Lab() {
   // The static /lab HTML is rendered for the default mode; match it during hydration.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
-  const mode = hydrated && (raw === 'day' || raw === 'wave' || raw === 'chroma' || raw === 'lightform' || raw === 'photo') ? raw : 'day';
+  const mode = hydrated && (raw === 'day' || raw === 'wave' || raw === 'chroma' || raw === 'lightform' || raw === 'photo' || raw === 'particles') ? raw : 'day';
   useEffect(() => {
     if (hydrated && raw && !modules.some(item => item.id === raw)) {
       const next = new URLSearchParams(params); next.set('mode', 'day');
@@ -87,6 +90,9 @@ export default function Lab() {
   const [state, dispatch] = useReducer(fullLabReducer, initialFullLabState);
   const [chromaSession, setChromaSession] = useState<ChromaSession>(initialChromaSession);
   const [mediaSession] = useState(() => new LabMediaSession());
+  const [particleSession] = useState(() => new ParticleFieldSession());
+  const mediaState = useMediaSession(mediaSession);
+  useEffect(() => () => particleSession.dispose(), [particleSession]);
   useEffect(() => () => mediaSession.dispose(), [mediaSession]);
   useEffect(() => { mediaSession.setActive(mode === 'lightform' || mode === 'photo'); }, [mode, mediaSession]);
   const chromaSessionRef = useRef(chromaSession);
@@ -99,7 +105,16 @@ export default function Lab() {
   const [message, setMessage] = useState('');
   const [demo, setDemo] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLElement>(null);
   const active = useActivity(stageRef);
+  useEffect(() => {
+    const rail = railRef.current;
+    const item = rail?.querySelector<HTMLElement>(`[data-module="${mode}"]`);
+    if (!rail || !item || rail.scrollWidth <= rail.clientWidth) return;
+    const bounds = rail.getBoundingClientRect(), target = item.getBoundingClientRect();
+    rail.scrollTo({ left: rail.scrollLeft + target.left - bounds.left - (bounds.width - target.width) / 2 });
+  }, [mode]);
+  useEffect(() => { particleSession.setEnvironment(fieldIsActive(mode, mediaState.source, active), reduced); }, [mode, mediaState.source, active, reduced, particleSession]);
   const onWaveSettingsChange = useCallback((patch: Partial<FluidLightState>) => {
     if (patch.palette !== undefined) dispatch({ type: 'WAVE_SET_PALETTE', value: patch.palette });
     if (patch.customColors !== undefined) dispatch({ type: 'WAVE_SET_COLORS', value: patch.customColors });
@@ -164,15 +179,15 @@ export default function Lab() {
     window.setTimeout(() => setMessage(''), 6000);
   };
   return <div className="lab-workbench" data-mode={mode}>
-    <nav className="lab-rail" aria-label={t('实验模块')}>
-      <div className="lab-rail-list">{modules.map(item => <button key={item.id} type="button" data-module={item.id} className={`lab-rail-item ${mode === item.id ? 'is-active' : ''}`} aria-current={mode === item.id ? 'page' : undefined} onClick={() => switchMode(item.id)}>
-        <span className="lab-rail-node" aria-hidden="true" /><span className="lab-rail-number">{item.num}</span><span className="lab-rail-label" lang={language === 'zh' ? 'zh-CN' : 'en'}>{pick(item.zh, item.en)}</span>
+    <nav className="lab-rail" ref={railRef} aria-label={t('实验模块')}>
+      <div className="lab-rail-list">{modules.map(item => <button key={item.id} type="button" data-module={item.id} className={`lab-rail-item ${!item.num ? 'is-display ' : ''}${mode === item.id ? 'is-active' : ''}`} aria-current={mode === item.id ? 'page' : undefined} onClick={() => switchMode(item.id)}>
+        <span className="lab-rail-node" aria-hidden="true" />{item.num && <span className="lab-rail-number">{item.num}</span>}<span className="lab-rail-label" lang={language === 'zh' ? 'zh-CN' : 'en'}>{pick(item.zh, item.en)}</span>
       </button>)}</div>
       <div className="lab-rail-footer">{pick('探索', 'EXPLORE')}<br />{pick('调整', 'ADJUST')}<br />{pick('体验', 'EXPERIENCE')}</div>
     </nav>
     <div className="lab-stage" ref={stageRef}>
-      {mode === 'chroma' || mode === 'lightform' || mode === 'photo' || mode === 'wave' ? <Suspense fallback={<div className="lab-import-loading" role="status">{t('正在加载实验…')}</div>}>
-        {mode === 'chroma' ? <ChromaField key="chroma" session={chromaSession} setSession={setChromaSession} /> : mode === 'lightform' ? <LightformStudio key="lightform" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} /> : mode === 'photo' ? <PhotoStudio key="photo" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} /> : <FluidLightCanvas key="wave" initialSettings={{ ...state.fluidLight, paused: reduced || state.fluidLight.paused }} reducedMotion={reduced} onSettingsChange={onWaveSettingsChange} />}
+      {mode === 'chroma' || mode === 'lightform' || mode === 'photo' || mode === 'wave' || mode === 'particles' ? <Suspense fallback={<div className="lab-import-loading" role="status">{t('正在加载实验…')}</div>}>
+        {mode === 'particles' ? <ParticleField session={particleSession} /> : mode === 'chroma' ? <ChromaField key="chroma" session={chromaSession} setSession={setChromaSession} /> : mode === 'lightform' ? <LightformStudio key="lightform" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} particleSession={particleSession} /> : mode === 'photo' ? <PhotoStudio key="photo" chromaSession={chromaSession} fluidSettings={state.fluidLight} mediaSession={mediaSession} particleSession={particleSession} /> : <FluidLightCanvas key="wave" initialSettings={{ ...state.fluidLight, paused: reduced || state.fluidLight.paused }} reducedMotion={reduced} onSettingsChange={onWaveSettingsChange} />}
       </Suspense> : <>
       <DayStage time={state.dayNight.time} split={state.dayNight.splitRatio} onSplit={value => dispatch({ type: 'DAYNIGHT_SET_SPLIT', value })} />
       <div className="lab-stage-shade" aria-hidden="true" />

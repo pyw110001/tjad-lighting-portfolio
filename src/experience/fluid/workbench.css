@@ -41,3 +41,24 @@
 .lab-workbench .fluid-light .fluid-pip-card { right: 330px; bottom: 106px; }
 .lab-workbench .fluid-light .fluid-fallback-overlay { background: #080c10; }
 .lab-workbench .fluid-light.fluid-fallback-wrap { display: flex; align-items: center; justify-content: center; }
+
+/* The desktop sidebars total 530px. On narrow screens, reserve a real
+   canvas row and put the controls below it instead of collapsing it to 0. */
+@media(max-width:900px){
+  .lab-workbench[data-mode="wave"] .lab-stage{height:auto;min-height:0;overflow:visible}
+  .lab-workbench .fluid-light{grid-template-columns:minmax(0,1fr);grid-template-rows:max(420px,calc(100dvh - 220px)) auto auto auto;height:auto;min-height:100%}
+  .lab-workbench .fluid-light .fluid-webgpu-canvas{grid-column:1;grid-row:1;position:relative;width:100%;height:100%}
+  .lab-workbench .fluid-light .fluid-stage-heading{grid-column:1;grid-row:1;margin:24px}
+  .lab-workbench .fluid-light .fluid-stage-hint{grid-column:1;grid-row:1;margin:0 24px 20px}
+  .lab-workbench .fluid-light .fluid-transport{grid-column:1;grid-row:2;flex-wrap:wrap;gap:10px;min-height:72px;padding:12px 16px}
+  .lab-workbench .fluid-light .fluid-transport>span{font-size:9px}
+  .lab-workbench .fluid-light .viewport-toolbar-vertical{grid-column:1;grid-row:3;position:relative;inset:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;padding:20px;border:0;border-top:1px solid #29343a;overflow:visible}
+  .lab-workbench .fluid-light .fluid-wordmark{grid-column:1/-1;margin-bottom:4px;font-size:18px}
+  .lab-workbench .fluid-light .viewport-toolbar-vertical h2{grid-column:1/-1;margin:10px 0 4px}
+  .lab-workbench .fluid-light .fluid-custom-colors{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .lab-workbench .fluid-light .fluid-custom-colors label{margin:0}
+  .lab-workbench .fluid-light .fluid-custom-colors p,.lab-workbench .fluid-light .fluid-gradient-preview{grid-column:1/-1}
+  .lab-workbench .fluid-light .fluid-bottom-bar{grid-column:1;grid-row:4;position:relative;inset:auto;display:flex;gap:20px;width:100%;padding:0 20px 24px;border:0;border-top:1px solid #29343a;overflow:visible}
+  .lab-workbench .fluid-light .fluid-inspector-title{margin:0 -20px;padding:20px}
+  .lab-workbench .fluid-light .fluid-pip-card{right:16px;bottom:auto;top:120px}
+}

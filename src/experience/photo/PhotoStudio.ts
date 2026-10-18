@@ -1,3 +1,4 @@
+import type { FieldMedia } from '../particles/types';
 import { DEFAULT_SETTINGS, type DisplaySettings, type SceneId, type StoredMedia, type StudioPointer } from '../lightform/studioTypes';
 import { mapPhotoSurface, mediaCoordinates, PANEL_ASPECT, PHOTO_WIDTH, PHOTO_HEIGHT } from './mapping';
 
@@ -106,7 +107,9 @@ export class PhotoStudio {
   private stored: StoredMedia | null = null;
   private liveCanvas: HTMLCanvasElement | null = null;
   private fluidVideo: HTMLVideoElement | null = null;
-  private sourceMode: 'stored' | 'chroma' | 'fluid' = 'stored';
+  private particleMedia: FieldMedia | null = null;
+  private particlePlaying = true;
+  private sourceMode: 'stored' | 'chroma' | 'fluid' | 'particles' = 'stored';
   private source: Source | null = null;
   private sourceDirty = true;
   private sourceAspect = 16 / 9;
@@ -199,7 +202,12 @@ export class PhotoStudio {
   setStoredMedia(media: StoredMedia | null) { this.stored = media; this.applySource(); }
   setLiveCanvas(canvas: HTMLCanvasElement | null) { this.liveCanvas = canvas; this.applySource(); }
   setFluidVideo(video: HTMLVideoElement | null) { this.fluidVideo = video; this.applySource(); }
-  setLiveSource(source: 'chroma' | 'fluid' | null) { this.sourceMode = source ?? 'stored'; this.applySource(); }
+  setLiveSource(source: 'chroma' | 'fluid' | 'particles' | null) { this.sourceMode = source ?? 'stored'; this.applySource(); }
+  setParticleMedia(media: FieldMedia | null, playing = true) {
+    this.particleMedia = media; this.particlePlaying = playing;
+    this.stopFrames(); this.applySource(); this.schedule();
+  }
+  refreshParticleFrame() { if (this.sourceMode === 'particles') this.render(); }
   private stopFrames() {
     cancelAnimationFrame(this.frame); this.frame = 0;
     if (this.videoFrame && this.frameVideo) this.frameVideo.cancelVideoFrameCallback(this.videoFrame);
@@ -207,7 +215,7 @@ export class PhotoStudio {
     this.host.dataset.animating = 'false';
   }
   private applySource() {
-    const source = this.sourceMode === 'chroma' && this.liveCanvas ? this.liveCanvas : this.sourceMode === 'fluid' && this.fluidVideo ? this.fluidVideo : this.stored?.element ?? null;
+    const source = this.sourceMode === 'particles' && this.particleMedia ? this.particleMedia : this.sourceMode === 'chroma' && this.liveCanvas ? this.liveCanvas : this.sourceMode === 'fluid' && this.fluidVideo ? this.fluidVideo : this.stored?.element ?? null;
     this.host.dataset.source = this.sourceMode === 'stored' ? this.stored?.info.kind ?? 'demo' : this.sourceMode;
     if (source === this.source) { this.render(); return; }
     this.stopFrames(); this.detachSource?.(); this.detachSource = null;
@@ -222,7 +230,10 @@ export class PhotoStudio {
     this.render(); this.schedule();
   }
   private schedule() {
-    if (this.disposed || document.hidden || this.frame || this.videoFrame) return;
+    // A paused GPU simulation can still emit a manually adjusted still frame.
+    // Video-frame callbacks sleep until a frame arrives; Canvas stills redraw
+    // through refreshParticleFrame without a polling RAF.
+    if (this.disposed || document.hidden || this.frame || this.videoFrame || (this.sourceMode === 'particles' && !this.particlePlaying && !(this.source instanceof HTMLVideoElement))) return;
     const source = this.source;
     if (source instanceof HTMLVideoElement && !source.paused) {
       this.frameVideo = source;
@@ -318,6 +329,6 @@ export class PhotoStudio {
     for (const plate of this.loaded) for (const texture of plate.textures) this.gl.deleteTexture(texture);
     this.gl.deleteTexture(this.mediaTexture); this.gl.deleteBuffer(this.buffer); this.gl.deleteVertexArray(this.vao); this.gl.deleteProgram(this.program);
     this.gl.getExtension('WEBGL_lose_context')?.loseContext(); this.canvas.remove();
-    this.loaded = []; this.plates.clear(); this.source = null; this.stored = null; this.liveCanvas = null; this.fluidVideo = null;
+    this.loaded = []; this.plates.clear(); this.source = null; this.stored = null; this.liveCanvas = null; this.fluidVideo = null; this.particleMedia = null;
   }
 }

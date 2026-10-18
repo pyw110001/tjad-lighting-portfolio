@@ -1,10 +1,11 @@
+import type { FieldMedia } from '../particles/types';
 export type SceneId = 'sphere' | 'collins' | 'facade';
 export type DisplaySettings = {
   brightness: number; pixel: number; ledTexture: number; dotGap: number;
   offset: number; glow: number; vertical: number;
 };
 export type MediaInfo = {
-  name: string; kind: 'demo' | 'image' | 'video' | 'chroma' | 'fluid';
+  name: string; kind: 'demo' | 'image' | 'video' | 'chroma' | 'fluid' | 'particles';
   width: number; height: number; duration: number; previewUrl: string | null;
 };
 export type StoredMedia = { info: MediaInfo; element: HTMLImageElement | HTMLVideoElement; url: string };
@@ -13,8 +14,11 @@ export interface StudioRenderer {
   setScene(id: SceneId): Promise<void>;
   setStoredMedia(media: StoredMedia | null): void;
   setLiveCanvas(canvas: HTMLCanvasElement | null): void;
+  setParticleMedia(media: FieldMedia | null, playing?: boolean): void;
+  refreshParticleFrame(): void;
+  setParticleInteraction?(enabled: boolean): void;
   setFluidVideo(video: HTMLVideoElement | null): void;
-  setLiveSource(source: 'chroma' | 'fluid' | null): void;
+  setLiveSource(source: 'chroma' | 'fluid' | 'particles' | null): void;
   setDisplay(id: SceneId, settings: DisplaySettings): void;
   setView(view: 'front' | 'side' | 'high'): void;
   resetView(): void;

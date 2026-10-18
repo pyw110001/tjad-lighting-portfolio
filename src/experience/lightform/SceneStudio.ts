@@ -1,3 +1,5 @@
+import type { FieldMedia } from '../particles/types';
+import type { StudioPointer } from './studioTypes';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -295,9 +297,14 @@ export class SceneStudio {
   private fluidTexture: THREE.VideoTexture | null = null;
   private lastLiveUpload = 0;
   private sharedMedia: { texture: THREE.Texture; video: HTMLVideoElement | null } | null = null;
-  private mediaSource: 'default' | 'upload' | 'chroma' | 'fluid' = 'default';
+  private particleTexture: THREE.CanvasTexture | THREE.VideoTexture | null = null;
+  private particleMedia: FieldMedia | null = null;
+  private particleInteraction = false;
+  private raycaster = new THREE.Raycaster();
+  private displayMeshes: Partial<Record<SceneId, THREE.Mesh>> = {};
+  private mediaSource: 'default' | 'upload' | 'chroma' | 'fluid' | 'particles' = 'default';
 
-  constructor(private readonly host: HTMLElement, onReady: () => void, onError: (message: string) => void) {
+  constructor(private readonly host: HTMLElement, onReady: () => void, onError: (message: string) => void, private onPointer?: (pointer: StudioPointer | null) => void) {
     this.scene.background = this.fallbackBackground;
     this.scene.fog = new THREE.FogExp2(0x0c1729, 0.0016);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
@@ -306,6 +313,11 @@ export class SceneStudio {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.9;
     this.host.appendChild(this.renderer.domElement);
+    this.renderer.domElement.addEventListener('pointermove', this.particleMove);
+    this.renderer.domElement.addEventListener('pointerdown', this.particleDown);
+    this.renderer.domElement.addEventListener('pointerup', this.particleLeave);
+    this.renderer.domElement.addEventListener('pointercancel', this.particleLeave);
+    this.renderer.domElement.addEventListener('pointerleave', this.particleLeave);
 
     this.camera.position.copy(INITIAL_VIEW.collins.camera);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -470,6 +482,7 @@ export class SceneStudio {
       }
       if (object instanceof THREE.Mesh && object.name === displayName) {
         object.material = this.runtimes[id].material;
+        this.displayMeshes[id] = object;
         object.frustumCulled = false;
         found = true;
         if (!object.geometry.getAttribute('uv')) throw new Error(`${displayName} 缺少媒体 UV。`);
@@ -659,6 +672,9 @@ export class SceneStudio {
       this.liveTexture.needsUpdate = true;
       this.lastLiveUpload = now;
     }
+    if (this.mediaSource === 'particles' && this.particleTexture instanceof THREE.CanvasTexture && now - this.lastLiveUpload >= 1000 / 30) {
+      this.particleTexture.needsUpdate = true; this.lastLiveUpload = now;
+    }
     this.controls.update();
     this.runtimes.collins.material.uniforms.uTime.value = this.clock.getElapsedTime();
     this.runtimes.facade.material.uniforms.uTime.value = this.clock.elapsedTime;
@@ -705,6 +721,55 @@ export class SceneStudio {
     }
   }
 
+  setParticleMedia(media: FieldMedia | null) {
+    if (media === this.particleMedia) return;
+    this.particleTexture?.dispose(); this.particleMedia = media;
+    this.particleTexture = media instanceof HTMLVideoElement ? new THREE.VideoTexture(media) : media ? new THREE.CanvasTexture(media) : null;
+    if (this.particleTexture) {
+      this.particleTexture.colorSpace = THREE.SRGBColorSpace;
+      this.particleTexture.generateMipmaps = false;
+      this.particleTexture.minFilter = THREE.LinearFilter;
+      this.particleTexture.magFilter = THREE.LinearFilter;
+    }
+    if (this.mediaSource === 'particles') this.applyCurrentMedia();
+  }
+  refreshParticleFrame() { if (this.particleTexture) this.particleTexture.needsUpdate = true; }
+  setParticleInteraction(enabled: boolean) {
+    this.particleInteraction = enabled; this.controls.enabled = !enabled;
+    if (!enabled) this.particleLeave();
+  }
+  private particleMove = (event: PointerEvent) => {
+    if (!this.particleInteraction || this.mediaSource !== 'particles') return;
+    const display = this.displayMeshes[this.active];
+    if (!display) return;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.scene.updateMatrixWorld();
+    this.raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2), this.camera);
+    const hit = this.raycaster.intersectObject(display, false)[0];
+    if (!hit?.uv) { this.particleLeave(); return; }
+    const settings = this.runtimes[this.active].material.uniforms;
+    let u = hit.uv.x, v = 1 - hit.uv.y;
+    if (this.active === 'sphere') u = ((u + settings.uOffset.value * .25) % 1 + 1) % 1;
+    else {
+      const aspect = settings.uFacadeAspect.value as number, sourceAspect = 16 / 9;
+      if (sourceAspect > aspect) {
+        const visible = aspect / sourceAspect;
+        u = .5 + (u - .5) * visible + settings.uOffsetX.value * (1 - visible) * .5;
+      } else {
+        const visible = sourceAspect / aspect;
+        v = .5 + (v - .5) * visible + settings.uOffsetY.value * (1 - visible) * .5;
+      }
+    }
+    u = THREE.MathUtils.clamp(u, .003, .997); v = THREE.MathUtils.clamp(v, .003, .997);
+    this.host.dataset.pointerUv = `${u.toFixed(3)},${v.toFixed(3)}`;
+    this.onPointer?.({ u, v, held: event.buttons !== 0, scatter: false });
+  };
+  private particleDown = (event: PointerEvent) => {
+    if (!this.particleInteraction) return;
+    this.renderer.domElement.setPointerCapture(event.pointerId); this.particleMove(event);
+  };
+  private particleLeave = () => { delete this.host.dataset.pointerUv; this.onPointer?.(null); };
+
   setLiveCanvas(canvas: HTMLCanvasElement | null) {
     this.liveTexture?.dispose();
     this.liveTexture = canvas ? new THREE.CanvasTexture(canvas) : null;
@@ -731,9 +796,12 @@ export class SceneStudio {
   }
 
   private applyCurrentMedia() {
+    this.host.dataset.source = this.mediaSource;
     for (const id of ['sphere', 'collins', 'facade'] as const) {
       const runtime = this.runtimes[id];
-      if (this.mediaSource === 'chroma' && this.liveTexture) {
+      if (this.mediaSource === 'particles' && this.particleTexture) {
+        this.applyTexture(id, this.particleTexture, 16 / 9, false);
+      } else if (this.mediaSource === 'chroma' && this.liveTexture) {
         const canvas = this.liveTexture.image as HTMLCanvasElement;
         this.applyTexture(id, this.liveTexture, canvas.width / canvas.height, false);
       } else if (this.mediaSource === 'fluid' && this.fluidTexture) {
@@ -750,7 +818,7 @@ export class SceneStudio {
     }
   }
 
-  setLiveSource(source: 'chroma' | 'fluid' | null) {
+  setLiveSource(source: 'chroma' | 'fluid' | 'particles' | null) {
     this.mediaSource = source ?? (this.sharedMedia ? 'upload' : 'default');
     this.applyCurrentMedia();
   }
@@ -836,6 +904,13 @@ export class SceneStudio {
 
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
+    this.particleLeave();
+    this.renderer.domElement.removeEventListener('pointermove', this.particleMove);
+    this.renderer.domElement.removeEventListener('pointerdown', this.particleDown);
+    this.renderer.domElement.removeEventListener('pointerup', this.particleLeave);
+    this.renderer.domElement.removeEventListener('pointercancel', this.particleLeave);
+    this.renderer.domElement.removeEventListener('pointerleave', this.particleLeave);
+    this.particleTexture?.dispose(); this.particleTexture = null; this.particleMedia = null;
     this.controls.dispose();
     for (const id of ['sphere', 'collins', 'facade'] as const) {
       ++this.runtimes[id].loadVersion;

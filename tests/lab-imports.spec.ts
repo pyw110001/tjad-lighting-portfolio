@@ -9,7 +9,7 @@ test('Chroma Field loads, responds, exports, translates, and keeps its artwork a
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/lab?mode=chroma');
   await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'chroma');
-  await expect(page.locator('.lab-rail-item')).toHaveCount(5);
+  await expect(page.locator('.lab-rail-item')).toHaveCount(6);
   await expect(page.locator('.chroma-field .particle-canvas')).toBeVisible();
   await expect(page.locator('.chroma-field .current-image img')).toHaveAttribute('alt', 'Studio portrait');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
@@ -60,6 +60,8 @@ test('Lightform Studio switches scenes, uploads, exports, translates, and resets
   await expect(page.locator('.lightform-studio .dropzone')).toBeEnabled();
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'facade.png', mimeType: 'image/png', buffer: image });
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('facade.png');
+  const showSettings = page.getByRole('button', { name: '显示参数面板', exact: true });
+  if (await showSettings.count()) await showSettings.click();
   await page.getByRole('slider', { name: '灯带亮度' }).fill('70');
   await expect(page.locator('.lightform-studio .slider-row').filter({ hasText: '灯带亮度' })).toContainText('70%');
   const download = page.waitForEvent('download');
@@ -318,7 +320,7 @@ test('Lightform keeps one uploaded asset across scenes and releases it on replac
   expect(await page.evaluate(() => (window as Window & { lightformUrls: { revoked: string[] } }).lightformUrls.revoked.length)).toBe(2);
   await page.locator('.lab-rail-item[data-module="photo"]').click();
   await expect(page.locator('.photo-studio .media-meta strong')).toHaveText('exit.png');
-  await page.getByRole('link', { name: '专业与团队', exact: true }).first().click();
+  await page.getByRole('link', { name: 'TJAD 建筑照明所首页', exact: true }).click();
   await expect.poll(() => page.evaluate(() => {
     const { created, revoked } = (window as Window & { lightformUrls: { created: string[]; revoked: string[] } }).lightformUrls;
     return created.length === 3 && revoked.length === 3 && created.every(url => revoked.includes(url));
@@ -409,10 +411,14 @@ test('Chroma Live maps to all three scenes and the facade LED texture remains in
   expect(ledFrame).not.toBe(smoothFrame);
   await page.getByRole('tab', { name: '球形展馆' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('static.png');
+  const reopenMedia = page.getByRole('button', { name: '显示素材面板', exact: true });
+  if (await reopenMedia.count()) await reopenMedia.click();
   await page.getByRole('button', { name: /使用 Chroma 实时画面/ }).click();
   await expect(page.locator('.lightform-studio .media-meta')).toContainText('CHROMA LIVE');
   await page.getByRole('button', { name: '切换为英文' }).first().click();
   await expect(page.locator('.lightform-studio .live-preview-toggle')).toContainText('Chroma Live');
+  const reopenSettings = page.getByRole('button', { name: 'Show settings panel', exact: true });
+  if (await reopenSettings.count()) await reopenSettings.click();
   await expect(page.getByRole('slider', { name: 'LED texture' })).toBeVisible();
   await page.getByRole('button', { name: 'Show media panel' }).click();
   await page.getByRole('button', { name: 'Return to previous media' }).first().click();
