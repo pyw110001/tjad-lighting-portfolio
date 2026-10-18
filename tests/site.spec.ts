@@ -59,26 +59,14 @@ test('filters persist in the URL and project details open with clean project 8 d
 });
 
 test('lab controls update real state and reset', async ({ page }) => {
-  await page.goto('/lab?mode=field');
-  await page.waitForTimeout(400);
-
-  // Verify solar timeline slider
-  const slider = page.getByLabel('日照时间轴');
-  await slider.fill('14');
-  await expect(page.locator('.current-time-badge')).toContainText('14:00');
-
-  // Switch light type to artificial light
-  const artBtn = page.getByRole('button', { name: '人工光' });
-  await artBtn.click();
-  await expect(artBtn).toHaveAttribute('aria-pressed', 'true');
-
-  // Reset field parameters
-  await page.locator('#lab-field .lab-reset-btn').click();
-  await expect(page.locator('.current-time-badge')).toContainText('10:30');
-
-  // Switch to 04 Color Studio
-  await page.getByRole('button', { name: 'Color Studio' }).click();
-  await expect(page.locator('#lab-color')).toBeVisible();
+  await page.goto('/lab?mode=day');
+  const slider = page.getByRole('slider', { name: '昼夜时间轴' });
+  await slider.fill('12');
+  await expect(page.locator('.lab-day-night-layer')).toHaveCSS('opacity', '0');
+  await page.getByRole('button', { name: '重置' }).click();
+  await expect(slider).toHaveValue('19.5');
+  await page.locator('.lab-rail-item[data-module="chroma"]').click();
+  await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'chroma');
 });
 
 test('404 and reduced-motion rendering stay usable', async ({ page }) => {

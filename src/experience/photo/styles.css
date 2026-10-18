@@ -1,0 +1,13 @@
+.photo-studio .canvas-host canvas { cursor: crosshair; }
+.photo-studio .topbar { background: #070d16; backdrop-filter: none; }
+.photo-studio .scene-caption { bottom: 50px; pointer-events: none; }
+.photo-studio .scene-caption strong { font-size: 15px; }
+.photo-studio .scene-footer { background: #070d16; }
+.photo-studio .brand-group small { color: #9fbed0; letter-spacing: .13em; }
+.photo-studio .live-preview { width: 285px; }
+.photo-studio .live-preview-canvas { height: 158px; }
+.lab-workbench[data-mode="photo"] .lab-stage { min-height: 550px; }
+@media (min-width: 1101px) {
+  .lab-rail-list { gap: 22px; }
+  .lab-rail-item { min-height: 86px; }
+}

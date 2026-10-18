@@ -1,32 +1,43 @@
-# LIGHT LAB 资产接入规范与热插拔指引
+# LIGHT LAB 资产目录
 
-本项目现已部署双轨架构：默认启用高拟真程序化 3D 建筑场景；如需接入由 Blender / Rhino / SketchUp 制作的工程级资产，只需将对应文件放置于本目录下对应文件夹，系统即可自动热加载。
+当前入口为昼夜切换、流光粒子、Chroma、Lightform Studio 和 Photo Lab。资产须与代码中的路径、显示网格名称和 UV 标定一致；放入任意模型不会自动完成交互接入。
 
-## 目录结构
+## 当前资源
 
 ```text
 public/assets/light-lab/
-├── models/
-│   ├── light-field.glb       # 01 实时光场建筑模型（含展厅/柱廊/地面）
-│   ├── pixel-facade.glb      # 02 像素立面建筑幕墙模型
-│   └── day-night.glb         # 03 昼夜切换建筑外观模型
-├── materials/
-│   ├── concrete/             # 混凝土 PBR 贴图（color.webp, normal.webp, rough.webp）
-│   ├── stone/                # 石材 PBR 贴图
-│   └── metal/                # 金属构件贴图
-├── environment/
-│   ├── studio.hdr            # 室内光环境反射图
-│   ├── daytime.hdr           # 日间天空 HDR
-│   └── night.hdr             # 夜间环境 HDR
-├── pixel-facade/
-│   └── pixel-positions.json  # 异形幕墙像素点阵坐标定义
-└── comparisons/
-    ├── project-day.webp      # 昼夜对比日景工程照片 (1600px+)
-    └── project-night.webp    # 昼夜对比夜景工程照片 (1600px+)
+├── scenes/                     # 昼夜图片与工作台场景图片
+├── chroma/demo-portrait-v2.png  # Chroma 演示与映射测试素材
+├── lightform/
+│   ├── draco/                  # 本地 Draco 解码器
+│   ├── environment/night-city.hdr
+│   ├── media/                  # 三套 3D 场景的默认素材
+│   └── models/                 # 城市模型及原版交互主体
+└── photo/
+    ├── {scene}-background.webp # 无月亮、无标语的干净背景
+    ├── {scene}-demo.webp       # 原图暖色灯光演示层
+    ├── {scene}-uv-high.png     # UV 高字节及显示区覆盖率
+    └── {scene}-uv-low.png      # UV 低字节及曲面明暗
 ```
 
-## 建模与导出规范
-- **格式**：GLB（嵌入材质与纹理）
-- **坐标系**：Y-Up，单位为米（m）
-- **命名规范**：主采光面命名为 `Wall_Main`，柱子命名为 `Pillar_*`，地面命名为 `Floor`，天花命名为 `Ceiling`
-- **材质槽**：独立材质槽，PBR 标准金属度/粗糙度工作流
+`{scene}` 为 `collins`、`facade` 或 `sphere`。图片及 UV 标定尺寸为 1672×941。旧目录如 `comparisons/` 可保留供历史模块使用，当前昼夜模块读取 `scenes/day.webp` 与 `scenes/night.webp`。
+
+## 3D 显示表面
+
+| 场景 | 浏览器 GLB | 显示网格 |
+| --- | --- | --- |
+| 888 Collins | `collins_street_web.glb` | `LED_TOWER_STRIPS` |
+| 弧形展馆 | `curved_pavilion_web.glb` | `LED_CURVED_DOTS` |
+| 球形展馆 | `dome_pavilion_web.glb` | `LED_DOME_SCREEN` |
+
+模型使用 Y-Up、米制坐标，贴图嵌入 GLB，显示表面保留媒体 UV。原版主体 `collins_light_house.glb`、`curved_dot_facade.glb`、`sphere_studio.glb` 是导出脚本的输入，也应保留。源 `.blend` 位于相邻的 `blender_anti`，不纳入本仓库。
+
+导出步骤见 [Blender 场景导出说明](../../../scripts/README-lightform.md)。生成后执行 `python scripts/validate-lightform-models.py` 校验资源体量、UV、显示网格及几何修复标记。
+
+## 图片版显示表面
+
+塔楼覆盖两面灯条至尖顶，弧形馆覆盖整块上层幕墙，球馆覆盖完整穹顶至玻璃大厅上沿。屋顶（塔楼及弧形馆）、大厅、树木和前景遮挡由背景保留。
+
+UV 贴图为不透明数值数据，禁止进行有损压缩或透明预乘处理。修改 `src/experience/photo/mapping.ts` 后，用 Node 24 运行 `node scripts/build-photo-assets.mjs`，并更新 `PhotoStudio.ts` 的资源版本参数，避免浏览器缓存旧映射。
+
+资源编码、鼠标映射及渲染生命周期见 [图片版说明](../../../scripts/README-photo-lab.md)。图片版默认不加载城市 GLB、HDR 或树木；实时粒子引擎仅在选中后初始化。
