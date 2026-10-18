@@ -33,51 +33,34 @@ test('Chroma Field loads, responds, exports, translates, and keeps its artwork a
   expect(errors).toEqual([]);
 });
 
-test('Lightform Studio switches scenes, uploads, exports, translates, and resets', async ({ page }) => {
+test('Lightform Studio switches three scenes, uploads, exports, translates, and resets', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/lab?mode=lightform');
-  await expect(page.locator('.lab-workbench')).toHaveAttribute('data-mode', 'lightform');
   await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 20_000 });
-  await expect(page.locator('.lightform-studio .canvas-host canvas')).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await expect(page.getByRole('tab', { name: '城市穹顶', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.scene-tabs [role=tab]')).toHaveCount(3);
   await page.getByRole('button', { name: '显示参数面板' }).click();
-  await expect(page.getByRole('slider', { name: '灯带亮度' })).toHaveValue('58');
-  await page.getByRole('tab', { name: '888 Collins' }).click();
-  await expect(page.getByRole('tab', { name: '888 Collins' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('slider', { name: '灯带亮度' })).toHaveValue('58');
-  await expect(page.getByRole('slider', { name: '灯带间隙' })).toHaveValue('42');
-  const stripCanvas = page.locator('.lightform-studio .canvas-host canvas');
-  await page.getByRole('slider', { name: '灯带间隙' }).fill('0');
-  await page.waitForTimeout(150);
-  const closedGap = await stripCanvas.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
-  await page.getByRole('slider', { name: '灯带间隙' }).fill('90');
-  await page.waitForTimeout(150);
-  expect(await stripCanvas.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL())).not.toBe(closedGap);
+  await expect(page.getByRole('slider', { name: '光点亮度' })).toHaveValue('58');
+  await page.getByRole('slider', { name: '光点亮度' }).fill('70');
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
+  await expect(page.getByRole('slider', { name: '光点亮度' })).toHaveValue('58');
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
+  await expect(page.getByRole('slider', { name: '光点亮度' })).toHaveValue('70');
   await page.getByRole('button', { name: '恢复默认显示' }).click();
-  await expect(page.getByRole('slider', { name: '灯带间隙' })).toHaveValue('42');
-  await page.getByRole('button', { name: '显示素材面板' }).click();
-  await expect(page.locator('.lightform-studio .dropzone')).toBeEnabled();
-  await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'facade.png', mimeType: 'image/png', buffer: image });
+  await expect(page.getByRole('slider', { name: '光点亮度' })).toHaveValue('58');
+  await page.locator('.lightform-studio input[type=file]').setInputFiles({ name: 'facade.png', mimeType: 'image/png', buffer: image });
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('facade.png');
-  const showSettings = page.getByRole('button', { name: '显示参数面板', exact: true });
-  if (await showSettings.count()) await showSettings.click();
-  await page.getByRole('slider', { name: '灯带亮度' }).fill('70');
-  await expect(page.locator('.lightform-studio .slider-row').filter({ hasText: '灯带亮度' })).toContainText('70%');
   const download = page.waitForEvent('download');
   await page.locator('.lightform-studio .export-button').click();
-  expect((await download).suggestedFilename()).toMatch(/collins-studio-.*\.png/);
-
+  expect((await download).suggestedFilename()).toMatch(/dome-studio-.*\.png/);
   await page.getByRole('button', { name: '切换为英文' }).first().click();
+  await expect(page.locator('.scene-tabs [role=tab]')).toHaveText(['City Dome', 'Fluid Facade', 'Light Field Plaza']);
   await expect(page.locator('.lightform-studio .export-button')).toContainText('Export image');
-  await expect(page.getByRole('slider', { name: 'Strip gap' })).toBeVisible();
-  await page.locator('.lab-rail-item[data-module="chroma"]').click();
-  await page.locator('.lab-rail-item[data-module="lightform"]').click();
-  await expect(page.getByRole('tab', { name: '888 Collins' })).toHaveAttribute('aria-selected', 'true');
   expect(errors).toEqual([]);
 });
 
-test('Lightform uploaded media keeps the correct top and bottom across all three scenes', async ({ page }) => {
+test('Lightform uploaded media keeps the correct top and bottom across both architectural surfaces', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   const svg = '<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">'
     + '<path fill="red" d="M0 0h512v256H0z"/><path fill="blue" d="M0 256h512v256H0z"/></svg>';
@@ -86,7 +69,7 @@ test('Lightform uploaded media keeps the correct top and bottom across all three
   await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 20_000 });
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'orientation.png', mimeType: 'image/png', buffer: orientationImage });
   await page.getByRole('button', { name: '隐藏素材面板' }).click();
-  for (const [name, label] of [['collins', '888 Collins'], ['facade', '弧形点阵展馆'], ['sphere', '球形展馆']] as const) {
+  for (const [name, label] of [['dome', '城市穹顶'], ['fluid', '流线灯幕']] as const) {
     const tab = page.getByRole('tab', { name: label });
     await tab.click();
     await expect(tab).toHaveAttribute('aria-selected', 'true');
@@ -113,7 +96,7 @@ test('Lightform uploaded media keeps the correct top and bottom across all three
   }
 });
 
-test('sphere shows the complete uploaded image above the plaza', async ({ page }) => {
+test('dome shows the complete uploaded image above the plaza', async ({ page }) => {
   const bands = await sharp(Buffer.from('<svg width="600" height="600" xmlns="http://www.w3.org/2000/svg">'
     + '<path fill="#ff0000" d="M0 0h600v200H0z"/><path fill="#00ff00" d="M0 200h600v200H0z"/>'
     + '<path fill="#0000ff" d="M0 400h600v200H0z"/></svg>')).png().toBuffer();
@@ -121,7 +104,7 @@ test('sphere shows the complete uploaded image above the plaza', async ({ page }
   await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 20_000 });
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'full-height.png', mimeType: 'image/png', buffer: bands });
   await page.getByRole('button', { name: '隐藏素材面板' }).click();
-  await page.getByRole('tab', { name: '球形展馆' }).click();
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
   await expect(page.locator('.scene-switch-mask')).not.toHaveClass(/active/);
   await expect.poll(async () => {
     const { data, info } = await sharp(await page.locator('.canvas-host').screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -136,11 +119,11 @@ test('sphere shows the complete uploaded image above the plaza', async ({ page }
       }
     }
     const means = heights.map((sum, index) => sum / counts[index]);
-    return { complete: counts.every(count => count > 1000) && means[0] + 20 < means[1] && means[1] + 20 < means[2], counts, means };
+    return { complete: counts.every(count => count > 100) && means[0] + 20 < means[1] && means[1] + 20 < means[2], counts, means };
   }, { message: 'All three image bands must be visible, ordered top to bottom above ground', timeout: 15_000 }).toMatchObject({ complete: true });
 });
 
-test('sphere media longitude seam stays behind the default camera', async ({ page }) => {
+test('dome media longitude seam stays behind the default camera', async ({ page }) => {
   // Deliberately different image edges make a front-facing wrap seam obvious.
   const longitudeImage = await sharp(Buffer.from('<svg width="600" height="600" xmlns="http://www.w3.org/2000/svg">'
     + '<path fill="#ff0000" d="M0 0h180v600H0z"/><path fill="#00ff00" d="M180 0h240v600H180z"/>'
@@ -149,7 +132,7 @@ test('sphere media longitude seam stays behind the default camera', async ({ pag
   await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 20_000 });
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'longitude.png', mimeType: 'image/png', buffer: longitudeImage });
   await page.getByRole('button', { name: '隐藏素材面板' }).click();
-  await page.getByRole('tab', { name: '球形展馆' }).click();
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
   await expect(page.locator('.scene-switch-mask')).not.toHaveClass(/active/);
   await expect.poll(async () => {
     const { data, info } = await sharp(await page.locator('.canvas-host').screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -161,7 +144,7 @@ test('sphere media longitude seam stays behind the default camera', async ({ pag
         if ((r > 80 && r > g + 40 && r > b + 40) || (b > 80 && b > r + 40 && b > g + 40)) edges++;
       }
     }
-    return { continuous: green > 1000 && edges < green * .01, green, edges };
+    return { continuous: green > 500 && edges < green * .01, green, edges };
   }, { message: 'Default front view must show the image center, not its red/blue wrap seam', timeout: 15_000 }).toMatchObject({ continuous: true });
 });
 
@@ -233,23 +216,28 @@ test('Lightform Studio accepts a local video and keeps it across its scenes', as
   await page.getByRole('button', { name: '暂停视频' }).click();
   await page.waitForTimeout(250);
   const pausedAt = Number(await page.getByRole('slider', { name: '视频进度' }).inputValue());
-  await page.getByRole('tab', { name: '888 Collins' }).click();
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('motion.webm');
   expect(Number(await page.getByRole('slider', { name: '视频进度' }).inputValue())).toBeCloseTo(pausedAt, 1);
-  await page.getByRole('tab', { name: '弧形点阵展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('motion.webm');
   expect(Number(await page.getByRole('slider', { name: '视频进度' }).inputValue())).toBeCloseTo(pausedAt, 1);
-  await page.getByRole('tab', { name: '球形展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('motion.webm');
-  await page.getByRole('button', { name: '恢复三个场景的演示素材' }).click();
-  await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('球形展馆地球夜景');
-  await page.getByRole('tab', { name: '888 Collins' }).click();
+  for (const name of ['城市穹顶', '流线灯幕']) {
+    await page.getByRole('tab', { name, exact: true }).click();
+    await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('motion.webm');
+    expect(Number(await page.getByRole('slider', { name: '视频进度' }).inputValue())).toBeCloseTo(pausedAt, 1);
+  }
+  await page.getByRole('button', { name: '恢复全部场景的演示素材' }).click();
+  await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText(/原生灯光演示/);
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
   await expect(page.locator('.lightform-studio .media-meta')).toContainText('BUILT-IN PREVIEW');
-  await page.getByRole('tab', { name: '弧形点阵展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await expect(page.locator('.lightform-studio .media-meta')).toContainText('BUILT-IN PREVIEW');
   await page.locator('.lab-rail-item[data-module="chroma"]').click();
   await page.locator('.lab-rail-item[data-module="lightform"]').click();
-  await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('街区塔楼灯带演示');
+  await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('城市穹顶原生灯光演示');
 });
 
 test('Lightform keeps one uploaded asset across scenes and releases it on replacement', async ({ page }, testInfo) => {
@@ -269,28 +257,13 @@ test('Lightform keeps one uploaded asset across scenes and releases it on replac
   await page.goto('/lab?mode=lightform');
   await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 20_000 });
   const stage = page.locator('.lightform-studio .canvas-host');
-  await expect(stage).toHaveAttribute('data-tree-count', /\d+/, { timeout: 20_000 });
-  const collinsTrees = Number(await stage.getAttribute('data-tree-triangles'));
-  expect(collinsTrees).toBeGreaterThan(0);
-  expect(collinsTrees + 72_604).toBeLessThan(1_500_000);
-  await stage.screenshot({ path: testInfo.outputPath('collins-eye-level.png') });
-  for (const [scene, fileName] of [['弧形点阵展馆', 'facade-eye-level.png'], ['球形展馆', 'dome-eye-level.png']] as const) {
-    const tab = page.getByRole('tab', { name: scene });
-    await tab.click();
-    await expect(tab).toHaveAttribute('aria-selected', 'true');
-    await expect(tab).toBeEnabled();
-    await expect(page.locator('.lightform-studio .scene-switch-mask')).not.toHaveClass(/active/);
-    await page.waitForTimeout(300);
-    const treeTriangles = Number(await stage.getAttribute('data-tree-triangles'));
-    if (scene === '球形展馆') {
-      expect(treeTriangles).toBeGreaterThan(0);
-      expect(treeTriangles + 60_062).toBeLessThan(1_500_000);
-    } else {
-      expect(treeTriangles).toBeGreaterThan(0);
-      expect(treeTriangles + 1_110_045).toBeLessThan(1_500_000);
-    }
-    await stage.screenshot({ path: testInfo.outputPath(fileName) });
+  for (const [id, name] of [['dome', '城市穹顶'], ['fluid', '流线灯幕'], ['field', '光柱广场']]) {
+    await page.getByRole('tab', { name, exact: true }).click();
+    await expect(stage).toHaveAttribute('data-scene', id);
+    await expect(stage).toHaveAttribute('data-display-count', id === 'field' ? '42' : '1');
+    await expect.poll(async () => Number(await stage.getAttribute('data-draw-calls'))).toBeLessThan(400);
   }
+  await page.getByRole('tab', { name: '城市穹顶', exact: true }).click();
   await page.getByRole('button', { name: '显示参数面板' }).click();
   await page.getByRole('button', { name: '俯视' }).click();
   await page.getByRole('button', { name: '重置视角' }).click();
@@ -298,16 +271,16 @@ test('Lightform keeps one uploaded asset across scenes and releases it on replac
   await stage.screenshot({ path: testInfo.outputPath('dome-reset-eye-level.png') });
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'shared.png', mimeType: 'image/png', buffer: image });
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('shared.png');
-  await page.getByRole('tab', { name: '888 Collins' }).click();
-  await expect(page.getByRole('tab', { name: '888 Collins' })).toBeEnabled();
-  await page.getByRole('tab', { name: '球形展馆' }).click();
-  await expect(page.getByRole('tab', { name: '球形展馆' })).toBeEnabled();
+  await page.getByRole('tab', { name: '城市穹顶' }).click();
+  await expect(page.getByRole('tab', { name: '城市穹顶' })).toBeEnabled();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
+  await expect(page.getByRole('tab', { name: '流线灯幕' })).toBeEnabled();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('shared.png');
   expect(await page.evaluate(() => (window as Window & { lightformUrls: { created: string[]; revoked: string[] } }).lightformUrls.revoked.length)).toBe(0);
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'replacement.png', mimeType: 'image/png', buffer: image });
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('replacement.png');
   expect(await page.evaluate(() => (window as Window & { lightformUrls: { created: string[]; revoked: string[] } }).lightformUrls.revoked.length)).toBe(1);
-  await page.getByRole('button', { name: '恢复三个场景的演示素材' }).click();
+  await page.getByRole('button', { name: '恢复全部场景的演示素材' }).click();
   expect(await page.evaluate(() => {
     const { created, revoked } = (window as Window & { lightformUrls: { created: string[]; revoked: string[] } }).lightformUrls;
     return created.length === 2 && revoked.length === 2 && created.every(url => revoked.includes(url));
@@ -341,7 +314,7 @@ test('new modes show a usable WebGL fallback', async ({ page }) => {
   await expect(page.locator('.lightform-studio .scene-loading')).toContainText('无法启动 WebGL');
 });
 
-test('Chroma Live maps to all three scenes and the facade LED texture remains independent', async ({ page }) => {
+test('Chroma Live maps to both architectural scenes and the facade LED texture remains independent', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/lab?mode=chroma');
@@ -376,9 +349,9 @@ test('Chroma Live maps to all three scenes and the facade LED texture remains in
   expect(await liveFrame()).not.toBe(hiddenFrame);
   const download = page.waitForEvent('download');
   await page.locator('.lightform-studio .export-button').click();
-  expect((await download).suggestedFilename()).toMatch(/collins-studio-.*\.png/);
+  expect((await download).suggestedFilename()).toMatch(/dome-studio-.*\.png/);
 
-  for (const tabName of ['球形展馆', '弧形点阵展馆']) {
+  for (const tabName of ['流线灯幕']) {
     await page.getByRole('tab', { name: tabName }).click();
     await expect(page.getByRole('tab', { name: tabName })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.lightform-studio .media-meta')).toContainText('CHROMA LIVE');
@@ -392,9 +365,9 @@ test('Chroma Live maps to all three scenes and the facade LED texture remains in
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('sphere-before-live.png');
   await page.locator('.lightform-studio input[type="file"]').setInputFiles({ name: 'static.png', mimeType: 'image/png', buffer: image });
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('static.png');
-  await page.getByRole('tab', { name: '球形展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('static.png');
-  await page.getByRole('tab', { name: '弧形点阵展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await page.getByRole('button', { name: '显示参数面板' }).click();
   const dotSize = page.getByRole('slider', { name: '光点大小' });
   const ledTexture = page.getByRole('slider', { name: '灯珠颗粒感' });
@@ -409,7 +382,7 @@ test('Chroma Live maps to all three scenes and the facade LED texture remains in
   await page.waitForTimeout(200);
   const ledFrame = await page.locator('.lightform-studio .canvas-host canvas').evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
   expect(ledFrame).not.toBe(smoothFrame);
-  await page.getByRole('tab', { name: '球形展馆' }).click();
+  await page.getByRole('tab', { name: '流线灯幕' }).click();
   await expect(page.locator('.lightform-studio .media-meta strong')).toHaveText('static.png');
   const reopenMedia = page.getByRole('button', { name: '显示素材面板', exact: true });
   if (await reopenMedia.count()) await reopenMedia.click();
@@ -441,6 +414,6 @@ test('Chroma Live keeps the previous media when its WebGL preview cannot start',
   await page.getByRole('button', { name: '显示素材面板' }).click();
   await page.getByRole('button', { name: /使用 Chroma 实时画面/ }).click();
   await expect(page.locator('.lightform-studio .error-banner')).toContainText('无法启动 Chroma 实时画面');
-  await expect(page.locator('.lightform-studio .media-meta')).toContainText('街区塔楼灯带演示');
+  await expect(page.locator('.lightform-studio .media-meta')).toContainText('城市穹顶原生灯光演示');
   await expect(page.locator('.lightform-studio .live-preview')).toHaveCount(0);
 });

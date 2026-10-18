@@ -1,4 +1,5 @@
 import type { ParticleFieldSession } from '../particles/session';
+import { PHOTO_CONFIG } from '../lightform/sceneConfig';
 import StudioWorkbench from '../lightform/StudioWorkbench';
 import { PhotoStudio } from './PhotoStudio';
 import type { StudioFactory } from '../lightform/studioTypes';
@@ -8,5 +9,5 @@ import type { LabMediaSession } from '../lightform/mediaSession';
 import './styles.css';
 const createStudio: StudioFactory = (host, ready, error, pointer) => new PhotoStudio(host, ready, error, pointer);
 export default function App(props: { chromaSession: ChromaSession; fluidSettings: FluidLightState; mediaSession: LabMediaSession; particleSession: ParticleFieldSession }) {
-  return <StudioWorkbench {...props} createStudio={createStudio} photo />;
+  return <StudioWorkbench {...props} createStudio={createStudio} config={PHOTO_CONFIG} photo />;
 }

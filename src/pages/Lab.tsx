@@ -23,7 +23,7 @@ const modules: { id: LabModuleId; num: string; en: string; zh: string; heading: 
   { id: 'wave', num: '02', en: 'Fluid Light', zh: '流光粒子', heading: 'FLUID LIGHT', image: 'wave', description: '基于 WebGPU SPH 动力学与 AI 手势感应，探索建筑交互流光微粒。' },
   { id: 'chroma', num: '03', en: 'Chroma Field', zh: '色彩粒子场', heading: 'CHROMA FIELD', description: '上传图片，用色彩与声音塑造可交互的粒子画面。' },
   { id: 'particles', num: '04', en: 'Particle Field', zh: '粒子流场', heading: 'PARTICLE FIELD', description: '用五种粒子流场探索聚散与动静，并实时展示到建筑。' },
-  { id: 'lightform', num: '', en: 'Lightform Studio', zh: '建筑光影模拟', heading: 'LIGHTFORM STUDIO', description: '在三座建筑场景中展示媒体与实时粒子的灯光表达。' },
+  { id: 'lightform', num: '', en: 'Lightform Studio', zh: '建筑光影模拟', heading: 'LIGHTFORM STUDIO', description: '在穹顶、流线灯幕与光柱广场中探索光的表达。' },
   { id: 'photo', num: '', en: 'Photo Lab', zh: '测试项', heading: 'PHOTO LAB', description: '用固定视角夜景图片展示媒体与实时粒子的建筑表达。' }
 ];
 

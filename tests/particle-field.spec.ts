@@ -67,7 +67,7 @@ test('Canvas five presets keep one running loop; offscreen and other modules sus
   expect(await snapshot(page)).toMatchObject({ preset: 'classic', backend: 'canvas2d', paused: false });
 });
 
-test('shared Canvas maps to all six building views, preserves paused frames, and restores stored media', async ({ page }, testInfo) => {
+test('shared Canvas maps to all five media building views, preserves paused frames, and restores stored media', async ({ page }, testInfo) => {
   test.setTimeout(90000);
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/lab?mode=particles'); await fieldReady(page);
@@ -87,7 +87,7 @@ test('shared Canvas maps to all six building views, preserves paused frames, and
     expect(await snapshot(page)).toMatchObject({ time: before.time, instance: before.instance, frames: before.frames, loopCount: 0 });
     await page.getByRole('slider', { name: /流场圆盘/ }).press('ArrowUp');
     await page.getByRole('button', { name: '隐藏粒子流场预览', exact: true }).click();
-    for (const name of ['888 Collins', '弧形点阵展馆', '球形展馆']) {
+    for (const name of module === 'photo' ? ['888 Collins', '弧形点阵展馆', '球形展馆'] : ['城市穹顶', '流线灯幕']) {
       await page.getByRole('tab', { name: name.startsWith('弧形') ? /^弧形/ : name, exact: true }).click(); await sceneReady(page);
       await expect(page.locator('.canvas-host')).toHaveAttribute('data-source', 'particles');
       expect((await snapshot(page)).time).toBe(before.time);
@@ -151,7 +151,7 @@ test('real WebGPU produces a video texture, all enhanced presets, continuous map
     await fieldReady(page);
     expect(await snapshot(page)).toMatchObject({ source: 'video', instance: before.instance, time: before.time, frames: before.frames, seedGeneration: transfer.seedGeneration });
     await page.getByRole('button', { name: '隐藏粒子流场预览', exact: true }).click();
-    for (const name of ['888 Collins', '弧形点阵展馆', '球形展馆']) {
+    for (const name of module === 'photo' ? ['888 Collins', '弧形点阵展馆', '球形展馆'] : ['城市穹顶', '流线灯幕']) {
       await page.getByRole('tab', { name: name.startsWith('弧形') ? /^弧形/ : name, exact: true }).click(); await sceneReady(page);
       await expect(page.locator('.canvas-host')).toHaveAttribute('data-source', 'particles');
     }

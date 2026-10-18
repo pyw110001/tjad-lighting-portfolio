@@ -1,6 +1,32 @@
 import { useLanguage } from '../../language';
 
 const english: Record<string, string> = {
+  '将当前粒子效果实时映射到建筑显示面': 'Map the particle artwork onto the architectural displays',
+  '将流光粒子实时映射到建筑显示面': 'Map Fluid Live onto the architectural displays',
+
+  '正面完整显示 · 背面左右镜像': 'Full front image · Mirrored on the rear',
+  '画面拉伸铺满整幅流线灯幕': 'Artwork stretches across the entire flowing facade',
+  '整面拉伸显示 · 完整覆盖灯幕': 'Full-surface stretch · No dark side margins',
+  '让暖光缓缓升起。': 'Let warm light rise slowly.', '光效': 'LIGHT',
+  '暖白呼吸灯 · 循环': 'Warm white breathing loop', '独立灯光演示': 'Independent lighting',
+  '暖白色光从底部缓慢向上点亮，渐暗后循环。': 'Warm white light rises slowly from the base, fades out and repeats.',
+  '独立循环 · 不受素材和粒子效果影响': 'Independent loop · Unaffected by media or particle effects',
+  '独立循环 · 暖白灯光': 'Independent warm white loop',
+
+  '城市穹顶': 'City Dome', '点阵立面': 'Dot Facade', '六边形灯幕': 'Hex Facade', '流线灯幕': 'Fluid Facade', '光柱广场': 'Light Field Plaza',
+  '城市穹顶原生灯光演示': 'City dome native lighting', '点阵立面原生灯光演示': 'Dot facade native lighting',
+  '六边形灯幕原生灯光演示': 'Hex facade native lighting', '流线灯幕原生灯光演示': 'Fluid facade native lighting', '光柱广场原生灯光演示': 'Light field native lighting',
+  '正在加载城市穹顶场景…': 'Loading the city dome…',
+  '等比完整显示 · 比例不匹配时保留暗区': 'Full image · Original aspect ratio · Dark margins when needed',
+  '将当前粒子效果实时映射到全部场景': 'Map the current particle artwork to every scene',
+  '将流光粒子实时映射到全部场景': 'Map Fluid Live to every scene', '恢复全部场景的演示素材': 'Restore all scene demos',
+  '画面等比完整映射到穹顶外表面': 'Full image mapped onto the outer dome',
+  '画面沿建筑外立面连续展开': 'Continuous image around the building perimeter',
+  '画面跨六边形面板连续显示': 'Continuous image across hexagonal panels',
+  '画面沿流线曲面连续展开': 'Continuous image around the flowing facade',
+  '画面按广场平面位置分配到每根灯柱': 'Columns sample the image by their position on the plaza',
+  '光柱显示': 'Light columns', '让灵感在光中连接。': 'Let ideas connect through light.', '走进流动的光场。': 'Step into a living field of light.',
+
   '粒子流场实时交互预览': 'Particle Field live interactive preview',
   '粒子流场实时画面': 'Particle Field Live',
   '使用粒子流场实时画面': 'Use Particle Field Live',
