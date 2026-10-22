@@ -71,3 +71,4 @@
 
 .lightform-studio .demo-thumb.column-demo{background:repeating-linear-gradient(90deg,#080d14 0 8px,#ffdfb4 9px 11px,#080d14 12px 20px);animation:none}
 .lightform-studio .autonomous-lighting .control-explainer{margin-top:0}
+.lightform-studio .column-presets{display:flex;gap:8px;margin:14px 0}.lightform-studio .column-presets button{flex:1;padding:12px 6px;border:1px solid #ffffff26;background:#101d2a;color:#b7c9d7;font-size:11px}.lightform-studio .column-presets button[aria-pressed=true]{border-color:#a6dce3;background:#233746;color:#e4fbff}.lightform-studio .column-presets button:first-child[aria-pressed=true]{box-shadow:inset 0 -2px #ae8be1}

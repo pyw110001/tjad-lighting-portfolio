@@ -1,6 +1,9 @@
 import { useLanguage } from '../../language';
 
 const english: Record<string, string> = {
+  '紫青光场 · 循环': 'Amethyst and mint light loop', '紫青光场': 'Amethyst & mint', '暖白呼吸': 'Warm white breath',
+  '灯光预设': 'Lighting presets', '参考镜头 · 小范围调整': 'Reference camera · Limited orbit',
+  '紫青灯光缓慢流动，也可切换为暖白向上呼吸循环。': 'Amethyst and mint light moves slowly. Switch to a rising warm white breath.',
   '将当前粒子效果实时映射到建筑显示面': 'Map the particle artwork onto the architectural displays',
   '将流光粒子实时映射到建筑显示面': 'Map Fluid Live onto the architectural displays',
 

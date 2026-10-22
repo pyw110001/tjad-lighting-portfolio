@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "fluid",
+    "bytes": 9198296,
+    "triangles": 453674,
+    "vertices": 831168,
+    "primitives": 31,
+    "meshes": 31,
+    "displays": 1,
+    "embeddedTextures": 8,
+    "extensions": [
+      "EXT_meshopt_compression",
+      "KHR_materials_emissive_strength",
+      "KHR_mesh_quantization",
+      "KHR_texture_basisu"
+    ]
+  },
+  {
+    "kind": "field",
+    "bytes": 5538012,
+    "triangles": 176332,
+    "vertices": 349904,
+    "primitives": 79,
+    "meshes": 79,
+    "displays": 56,
+    "embeddedTextures": 12,
+    "extensions": [
+      "EXT_meshopt_compression",
+      "KHR_materials_emissive_strength",
+      "KHR_mesh_quantization",
+      "KHR_texture_basisu"
+    ]
+  }
+]

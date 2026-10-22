@@ -14,6 +14,7 @@ import { type DisplaySettings, type MediaInfo, type StudioConfig, type StudioFac
 import { useMediaSession, type LabMediaSession, type MediaSource } from './mediaSession';
 import './styles.css'
 import { useLightformCopy } from './copy';
+import type { ColumnPreset } from './columnLighting';
 const ParticleField = lazy(() => import('../particles/ParticleField'));
 const FluidLivePreview = lazy(() => import('../fluid/FluidLivePreview'));
 const fluidSupported = () => typeof navigator !== 'undefined' && !!navigator.gpu;
@@ -71,6 +72,8 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
   const [livePanelOpen, setLivePanelOpen] = useState(false);
   const [settingsByScene, setSettingsByScene] = useState<Record<S, DisplaySettings>>(() => Object.fromEntries(config.scenes.map(scene => [scene.id, { ...scene.settings }])) as Record<S, DisplaySettings>);
   const [isDragging, setIsDragging] = useState(false);
+  const [columnPreset, setColumnPreset] = useState<ColumnPreset>('reference');
+  const columnName = columnPreset === 'reference' ? '紫青光场 · 循环' : '暖白呼吸灯 · 循环';
   const sceneDefinition = config.scenes.find(scene => scene.id === sceneId)!;
   const independent = !!sceneDefinition.independent;
   const selectedChroma = chromaSession.images.find(image => image.id === chromaSession.selectedId);
@@ -78,7 +81,7 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
   const activeFluid = !independent && source === 'fluid';
   const activeParticles = !independent && source === 'particles';
   useEffect(() => { fluidRequested.current = activeFluid; }, [activeFluid]);
-  const media: MediaInfo = independent ? sceneDefinition.media : activeLive ? {
+  const media: MediaInfo = independent ? { ...sceneDefinition.media, name: columnName } : activeLive ? {
     name: selectedChroma.name, kind: 'chroma', width: 0, height: 0, duration: 0, previewUrl: selectedChroma.url,
   } : activeFluid ? { name: 'Fluid Live', kind: 'fluid', width: photo ? 1920 : 960, height: photo ? 1080 : 540, duration: 0, previewUrl: null } : activeParticles ? { name: '粒子流场实时画面', kind: 'particles', width: 1280, height: 720, duration: 0, previewUrl: null } : sharedMedia ?? (photo ? {
     ...sceneDefinition.media, name: '原图暖色灯光', previewUrl: `/assets/light-lab/photo/${sceneId}-background.webp`,
@@ -163,6 +166,7 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
   useEffect(() => {
     for (const scene of config.scenes) studio.current?.setDisplay(scene.id, settingsByScene[scene.id]);
   }, [settingsByScene, config, rendererVersion]);
+  useEffect(() => { studio.current?.setColumnPreset?.(columnPreset); }, [columnPreset, rendererVersion]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -347,7 +351,12 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
         <div className="panel-scroll">
           {error && <div className="error-banner" role="alert"><CircleHelp size={17} /><span>{t(error)}</span><button aria-label={t('关闭错误')} onClick={() => setError('')}><X size={15} /></button></div>}
           {independent ? <section className="panel-section autonomous-lighting">
-            <div className="section-label">{t('暖白呼吸灯 · 循环')}</div>
+            <div className="section-label">{t('灯光预设')}</div>
+            <div className="column-presets" role="group" aria-label={t('灯光预设')}>
+              {(['reference', 'warm'] as const).map(preset => <button type="button" key={preset}
+                aria-pressed={columnPreset === preset} disabled={!ready || switching}
+                onClick={() => setColumnPreset(preset)}>{t(preset === 'reference' ? '紫青光场' : '暖白呼吸')}</button>)}
+            </div>
             <p className="control-explainer">{t(sceneDefinition.note)}</p>
             <p className="media-note">{t('独立循环 · 不受素材和粒子效果影响')}</p>
           </section> : <>
@@ -384,7 +393,7 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
                 : media.kind === 'particles' ? <div className="fluid-media-thumb" aria-label={t('粒子流场实时画面')} /> : media.kind === 'fluid' ? <div className="fluid-media-thumb" aria-label="Fluid Live" />
                 : media.kind === 'image' || media.kind === 'chroma' ? <img src={media.previewUrl ?? ''} alt={t('当前素材预览')} />
                   : <video src={media.previewUrl ?? ''} muted playsInline preload="metadata" aria-label={t('当前视频缩略图')} />}
-            </div><div className="media-meta"><strong title={media.name}>{t(media.name)}</strong><span>{media.kind === 'chroma' || media.kind === 'fluid' || media.kind === 'particles' ? t('实时粒子画面') : media.kind === 'demo' ? t(independent ? '独立循环 · 暖白灯光' : '建筑点阵 · 动态演示') : `${media.width} × ${media.height}`}</span><small>{media.kind === 'particles' ? 'PARTICLE FIELD LIVE' : media.kind === 'chroma' ? 'CHROMA LIVE' : media.kind === 'fluid' ? 'FLUID LIVE' : media.kind === 'demo' ? 'BUILT-IN PREVIEW' : media.kind === 'video' ? 'VIDEO / LOCAL FILE' : 'IMAGE / LOCAL FILE'}</small></div>
+            </div><div className="media-meta"><strong title={media.name}>{t(media.name)}</strong><span>{media.kind === 'chroma' || media.kind === 'fluid' || media.kind === 'particles' ? t('实时粒子画面') : media.kind === 'demo' ? t(independent ? columnName : '建筑点阵 · 动态演示') : `${media.width} × ${media.height}`}</span><small>{media.kind === 'particles' ? 'PARTICLE FIELD LIVE' : media.kind === 'chroma' ? 'CHROMA LIVE' : media.kind === 'fluid' ? 'FLUID LIVE' : media.kind === 'demo' ? 'BUILT-IN PREVIEW' : media.kind === 'video' ? 'VIDEO / LOCAL FILE' : 'IMAGE / LOCAL FILE'}</small></div>
               {media.kind === 'chroma' || media.kind === 'fluid' || media.kind === 'particles' ? <button className="media-remove" title={t('切回原素材')} aria-label={t('切回原素材')} disabled={switching} onClick={chooseStored}><X size={15} /></button> : !independent && sharedMedia && <button className="media-remove" title={t('恢复全部场景的演示素材')} aria-label={t('恢复全部场景的演示素材')} disabled={switching} onClick={() => void removeMedia()}><X size={15} /></button>}
             </div>
             {media.kind === 'video' ? <div className="playback"><button disabled={switching} onClick={() => void togglePlayback()} aria-label={t(isPlaying ? '暂停视频' : '播放视频')}>{isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}</button><span>{formatTime(currentTime)}</span><input type="range" min={0} max={media.duration || 1} step="0.01" value={Math.min(currentTime, media.duration || 1)} disabled={switching} onChange={(event) => seek(Number(event.target.value))} aria-label={t('视频进度')} /><span>{formatTime(media.duration)}</span></div>
@@ -425,14 +434,14 @@ export default function StudioWorkbench<S extends string>({ chromaSession, fluid
           </section>
           {!photo && !independent && <p className="media-note">{t(sceneId === 'fluid' ? '整面拉伸显示 · 完整覆盖灯幕' : '正面完整显示 · 背面左右镜像')}</p>}
           {!photo && <section className="panel-section view-section"><div className="section-label">{t('视角预设')}</div>
-            <div className="view-options"><button onClick={() => studio.current?.setView('front')}><Eye size={17} />{t(isCollins ? '街角' : '正面')}</button><button onClick={() => studio.current?.setView('side')}><Layers3 size={17} />{t('侧面')}</button><button onClick={() => studio.current?.setView('high')}><Video size={17} />{t('俯视')}</button></div>
+            {sceneDefinition.referenceView ? <p className="control-explainer">{t('参考镜头 · 小范围调整')}</p> : <div className="view-options"><button onClick={() => studio.current?.setView('front')}><Eye size={17} />{t(isCollins ? '街角' : '正面')}</button><button onClick={() => studio.current?.setView('side')}><Layers3 size={17} />{t('侧面')}</button><button onClick={() => studio.current?.setView('high')}><Video size={17} />{t('俯视')}</button></div>}
             <button className="reset-view" onClick={() => studio.current?.resetView()}><RotateCcw size={16} />{t('重置视角')}</button>
           </section>}
         </div>
       </aside>
 
       <div className="scene-caption"><span className="caption-rule" /><div><span>{sceneLabel}</span><strong>{t(sceneDefinition.caption)}</strong></div></div>
-      <footer className="scene-footer"><div className="gesture-hint"><Mouse size={15} />{t(activeParticles ? (particleState.preset === 'classic' ? '原始效果请使用浮窗圆盘控制' : photo || particleInteraction ? '移动指针扰动 · 按住吸引' : '拖动旋转') : photo ? '固定视角 · 显示区拖动吸引 · 右键推散' : '拖动旋转')} {!photo && <><span />{t('滚轮缩放')}</>}</div><div className="footer-status"><span className="live-dot" /> {t(media.kind === 'particles' ? '粒子流场实时串流' : media.kind === 'chroma' ? 'Chroma 实时串流' : media.kind === 'fluid' ? 'Fluid 实时串流' : media.kind === 'video' ? (isPlaying ? '视频播放' : '视频已暂停') : media.kind === 'demo' ? (photo ? '原图暖色灯光' : independent ? '独立循环 · 暖白灯光' : '动态演示') : '图片展示')} <span className="footer-separator">/</span> {photo ? 'FIXED VIEW' : '16:9 STAGE'}</div></footer>
+      <footer className="scene-footer"><div className="gesture-hint"><Mouse size={15} />{t(activeParticles ? (particleState.preset === 'classic' ? '原始效果请使用浮窗圆盘控制' : photo || particleInteraction ? '移动指针扰动 · 按住吸引' : '拖动旋转') : photo ? '固定视角 · 显示区拖动吸引 · 右键推散' : '拖动旋转')} {!photo && <><span />{t('滚轮缩放')}</>}</div><div className="footer-status"><span className="live-dot" /> {t(media.kind === 'particles' ? '粒子流场实时串流' : media.kind === 'chroma' ? 'Chroma 实时串流' : media.kind === 'fluid' ? 'Fluid 实时串流' : media.kind === 'video' ? (isPlaying ? '视频播放' : '视频已暂停') : media.kind === 'demo' ? (photo ? '原图暖色灯光' : independent ? columnName : '动态演示') : '图片展示')} <span className="footer-separator">/</span> {photo ? 'FIXED VIEW' : '16:9 STAGE'}</div></footer>
     </div>
   </div></div>;
 }

@@ -5,11 +5,11 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import type { FieldMedia } from '../particles/types';
-import { batchEnvironment } from './night/batchEnvironment';
 import { NIGHT_CONFIG } from './sceneConfig';
 import { mediaTransform, mapMediaPoint } from './mediaMapping';
 import { bindNightSurfaces, type NativeNightScene, type NightSurfaces } from './nightSurfaces';
 import type { DisplaySettings, NightSceneId, StoredMedia, StudioPointer, StudioRenderer } from './studioTypes';
+import type { ColumnPreset } from './columnLighting';
 
 type Runtime = { native: NativeNightScene; display: NightSurfaces; camera: THREE.Vector3; target: THREE.Vector3 };
 type Source = 'default' | 'upload' | 'chroma' | 'fluid' | 'particles';
@@ -43,6 +43,7 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
   private interaction = false;
   private raycaster = new THREE.Raycaster();
   private started = performance.now();
+  private columnPreset: ColumnPreset = 'reference';
 
   constructor(private host: HTMLElement, onReady: () => void, private onError: (message: string) => void,
     private onPointer?: (pointer: StudioPointer | null) => void) {
@@ -83,13 +84,13 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
     const task = (async () => {
       let native: NativeNightScene;
       if (id === 'dome') { const module = await import('./night/domeScene'); if (this.disposed) throw new Error('场景已关闭。'); native = module.createDomeScene(this.renderer) as NativeNightScene; }
-      else { const module = await import('./night/referenceScenes'); if (this.disposed) throw new Error('场景已关闭。'); native = (id === 'fluid' ? module.createFluidScene() : module.createLightFieldScene()) as NativeNightScene; }
+      else { const module = await import('./night/blenderScenes'); if (this.disposed) throw new Error('场景已关闭。'); native = await module.loadBlenderNightScene(this.renderer, id); }
       this.ownedScenes.add(native);
       if (this.disposed) { this.disposeNative(native); throw new Error('场景已关闭。'); }
       try {
         await native.ready;
         if (this.disposed) throw new Error('场景已关闭。');
-        if (id === 'fluid' || id === 'field') batchEnvironment(native.scene, new Set());
+        native.setColumnPreset?.(this.columnPreset);
         const runtime: Runtime = { native, display: bindNightSurfaces(id, native), camera: native.cameraPosition.clone(), target: native.target.clone() };
         this.runtimes.set(id, runtime);
         this.applyMedia(runtime, id);
@@ -110,12 +111,20 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
     this.renderPass.scene = runtime.native.scene;
     this.camera.fov = runtime.native.fov ?? 43;
     this.camera.position.copy(runtime.camera); this.controls.target.copy(runtime.target);
-    this.controls.minDistance = id === 'dome' ? 15 : 10;
+    const limits = runtime.native.cameraLimits;
+    const spherical = new THREE.Spherical().setFromVector3(runtime.native.cameraPosition.clone().sub(runtime.native.target));
+    this.controls.minDistance = limits?.minDistance ?? 15; this.controls.maxDistance = limits?.maxDistance ?? 72;
+    this.controls.minAzimuthAngle = limits ? spherical.theta - limits.azimuth : -Infinity;
+    this.controls.maxAzimuthAngle = limits ? spherical.theta + limits.azimuth : Infinity;
+    this.controls.minPolarAngle = limits ? spherical.phi - limits.polar : .15;
+    this.controls.maxPolarAngle = limits ? spherical.phi + limits.polar : Math.PI / 2.05;
     this.controls.enabled = id === 'field' || !this.interaction;
     this.controls.update(); this.resize(); this.applyMedia(runtime, id);
     this.host.dataset.source = id === 'field' ? 'autonomous' : this.source;
     this.host.dataset.scene = id; this.host.dataset.displayCount = String(id === 'field' ? runtime.native.materials?.length ?? 0 : runtime.display.surfaces.length);
     this.host.dataset.surfaceAspect = String(runtime.display.aspect);
+    this.host.dataset.assetSource = id === 'dome' ? 'native' : 'blender-glb';
+    this.host.dataset.columnPreset = this.columnPreset;
   }
 
   private resize() {
@@ -123,6 +132,7 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
     const width = Math.max(1, this.host.clientWidth), height = Math.max(1, this.host.clientHeight);
     this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false); this.composer.setSize(width, height);
+    this.runtimes.get(this.active)?.native.resize?.(width, height);
   }
   private animate = () => {
     if (this.disposed) return;
@@ -142,6 +152,10 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
     }
     this.renderer.info.reset(); this.composer.render();
     this.host.dataset.drawCalls = String(this.renderer.info.render.calls);
+    this.host.dataset.triangles = String(this.renderer.info.render.triangles);
+    this.host.dataset.cameraPosition = this.camera.position.toArray().map(v => v.toFixed(3)).join(',');
+    this.host.dataset.cameraAzimuth = this.controls.getAzimuthalAngle().toFixed(4);
+    this.host.dataset.cameraPolar = this.controls.getPolarAngle().toFixed(4);
   };
 
   private selectedMedia(): { texture: THREE.Texture; aspect: number } | null {
@@ -182,8 +196,9 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
       }
     }
     if (id === this.active) {
-      this.bloom.strength = id === 'field' ? .06 + settings.glow / 1200 : selected ? .12 + settings.glow / 400 : .52 * settings.glow / 58;
-      this.renderer.toneMappingExposure = selected ? 1.05 : 1.12;
+      this.bloom.strength = id === 'dome' ? (selected ? .12 + settings.glow / 400 : .52 * settings.glow / 58) : .06 + settings.glow / 450;
+      this.bloom.threshold = id === 'dome' ? .9 : 1.25;
+      this.renderer.toneMappingExposure = id === 'dome' ? (selected ? 1.05 : 1.12) : .95;
     }
   }
   private applyCurrentMedia() {
@@ -217,6 +232,7 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
   setLiveSource(source: 'chroma' | 'fluid' | 'particles' | null) { this.source = source ?? (this.uploadTexture ? 'upload' : 'default'); this.applyCurrentMedia(); }
   setDisplay(id: NightSceneId, settings: DisplaySettings) { this.settings.set(id, { ...settings }); const runtime = this.runtimes.get(id); if (runtime) this.applyMedia(runtime, id); }
   setParticleInteraction(enabled: boolean) { this.interaction = enabled; this.controls.enabled = this.active === 'field' || !enabled; if (!enabled) this.pointerLeave(); }
+  setColumnPreset(preset: ColumnPreset) { this.columnPreset = preset; this.runtimes.get('field')?.native.setColumnPreset?.(preset); this.host.dataset.columnPreset = preset; }
 
   private pointerMove = (event: PointerEvent) => {
     if (this.active === 'field' || !this.interaction || this.source !== 'particles') return;
@@ -251,11 +267,18 @@ export class SceneStudio implements StudioRenderer<NightSceneId> {
 
   setView(view: 'front' | 'side' | 'high') {
     const runtime = this.runtimes.get(this.active); if (!runtime) return;
+    if (runtime.native.cameraLimits) { this.resetView(); return; }
     const target = runtime.native.target, distance = runtime.native.cameraPosition.distanceTo(target);
     const direction = view === 'front' ? new THREE.Vector3(0, .12, 1) : view === 'side' ? new THREE.Vector3(1, .2, .1) : new THREE.Vector3(.35, 1, .65);
     this.controls.target.copy(target); this.camera.position.copy(target).addScaledVector(direction.normalize(), distance); this.controls.update();
   }
-  resetView() { const runtime = this.runtimes.get(this.active); if (!runtime) return; this.camera.position.copy(runtime.native.cameraPosition); this.controls.target.copy(runtime.native.target); this.controls.update(); }
+  resetView() {
+    const runtime = this.runtimes.get(this.active); if (!runtime) return;
+    // Drain orbit inertia before placing the camera, so reset has an exact, stable result.
+    const damping = this.controls.enableDamping; this.controls.enableDamping = false; this.controls.update();
+    this.camera.position.copy(runtime.native.cameraPosition); this.controls.target.copy(runtime.native.target); this.controls.update();
+    this.controls.enableDamping = damping;
+  }
   exportPng() {
     this.composer.render(); const link = document.createElement('a'); link.href = this.renderer.domElement.toDataURL('image/png');
     link.download = `${this.active}-studio-${new Date().toISOString().slice(0, 10)}.png`; link.click();

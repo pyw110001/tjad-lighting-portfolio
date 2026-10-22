@@ -1,0 +1,15 @@
+{
+  "kind": "fluid",
+  "sourceBlend": "D:\\01_AIGC\\CODEX\\AI_LIGHTING_WEBSITE\\blender\\night-scenes\\fluid.blend",
+  "sourceTriangles": 453674,
+  "roundTripTriangles": 453674,
+  "sourceMeshes": 31,
+  "roundTripMeshes": 31,
+  "missingSourceImages": [],
+  "bakedMeshes": [
+    "STATIC | lobby"
+  ],
+  "displayMeshes": 1,
+  "scaleToleranceMetres": 0.001,
+  "sourceModified": false
+}

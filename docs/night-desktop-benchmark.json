@@ -1,0 +1,61 @@
+{
+  "url": "http://127.0.0.1:4187/lab?mode=lightform",
+  "viewport": "1920x1080",
+  "browserPath": "Browser plugin not available; project Playwright + Chrome",
+  "errors": [],
+  "scenes": [
+    {
+      "kind": "fluid",
+      "diagnostics": {
+        "source": "default",
+        "columnPreset": "reference",
+        "scene": "fluid",
+        "displayCount": "1",
+        "surfaceAspect": "8",
+        "assetSource": "blender-glb",
+        "drawCalls": "71",
+        "triangles": "729860",
+        "cameraPosition": "28.000,3.200,61.000",
+        "cameraAzimuth": "0.4366",
+        "cameraPolar": "1.6281"
+      },
+      "benchmark": {
+        "seconds": 60,
+        "frames": 14385,
+        "meanFrameMs": 4.170976711852089,
+        "meanFps": 239.7519979333469,
+        "p50FrameMs": 4.19999999999709,
+        "p95FrameMs": 4.299999999999272,
+        "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+      }
+    },
+    {
+      "kind": "field",
+      "diagnostics": {
+        "source": "autonomous",
+        "columnPreset": "reference",
+        "scene": "field",
+        "displayCount": "56",
+        "surfaceAspect": "1",
+        "assetSource": "blender-glb",
+        "drawCalls": "176",
+        "triangles": "353928",
+        "cameraPosition": "21.000,2.500,43.000",
+        "cameraAzimuth": "0.4023",
+        "cameraPolar": "1.6197",
+        "columnFill": "0.437",
+        "columnBreath": "0.719"
+      },
+      "benchmark": {
+        "seconds": 60,
+        "frames": 14385,
+        "meanFrameMs": 4.170976711852625,
+        "meanFps": 239.75199793331606,
+        "p50FrameMs": 4.19999999999709,
+        "p95FrameMs": 4.30000000000291,
+        "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+      }
+    }
+  ],
+  "title": "光的实验室 — TJAD 建筑照明所"
+}

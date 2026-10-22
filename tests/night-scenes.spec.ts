@@ -10,6 +10,46 @@ async function select(page: Page, id: string, name: string) {
 }
 async function ready(page: Page) { await expect(page.locator('.lightform-studio')).toBeVisible(); await expect(page.locator('.lightform-studio .scene-loading')).toBeHidden({ timeout: 30_000 }); await expect(page.locator('.scene-tabs [role=tab]').first()).toBeEnabled(); }
 
+test('Blender reference cameras stay inside the authored viewing cone and reset exactly', async ({ page }) => {
+  await page.goto('/lab?mode=lightform'); await ready(page);
+  for (const [id, name] of scenes.filter(([id]) => id !== 'dome')) {
+    await select(page, id, name);
+    const stage = page.locator('.canvas-host');
+    const initial = await stage.evaluate(n => ({ ...n.dataset }));
+    const box = (await stage.boundingBox())!;
+    await page.mouse.move(box.x + box.width * .3, box.y + box.height * .5);
+    await page.mouse.down(); await page.mouse.move(box.x + box.width * .8, box.y + box.height * .9, { steps: 18 }); await page.mouse.up();
+    const moved = await stage.evaluate(n => ({ ...n.dataset }));
+    expect(Math.abs(Number(moved.cameraAzimuth) - Number(initial.cameraAzimuth))).toBeLessThanOrEqual(.101);
+    expect(Math.abs(Number(moved.cameraPolar) - Number(initial.cameraPolar))).toBeLessThanOrEqual(.046);
+    expect(moved.cameraPosition).not.toBe(initial.cameraPosition);
+    await page.getByRole('button', { name: '显示参数面板', exact: true }).click();
+    await page.getByRole('button', { name: '重置视角', exact: true }).click();
+    await expect(stage).toHaveAttribute('data-camera-position', initial.cameraPosition!);
+    await expect(page.getByRole('button', { name: '俯视', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: '隐藏参数面板', exact: true }).click();
+  }
+});
+
+test('reference colours are the default, presets survive scene switches, and failed GLBs can be retried', async ({ page }) => {
+  await page.goto('/lab?mode=lightform'); await ready(page);
+  await page.route('**/night/models/field-web.glb', route => route.abort());
+  await page.getByRole('tab', { name: '光柱广场', exact: true }).click();
+  await expect(page.locator('.error-banner')).toContainText('Blender 场景加载失败');
+  await page.unroute('**/night/models/field-web.glb');
+  await select(page, 'field', '光柱广场');
+  const stage = page.locator('.canvas-host');
+  await expect(stage).toHaveAttribute('data-column-preset', 'reference');
+  // The failed load opens the media panel so the error remains reviewable.
+  await expect(page.getByRole('button', { name: '紫青光场', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '暖白呼吸', exact: true }).click();
+  await expect(stage).toHaveAttribute('data-column-preset', 'warm');
+  await select(page, 'fluid', '流线灯幕'); await select(page, 'field', '光柱广场');
+  await expect(page.getByRole('button', { name: '暖白呼吸', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '紫青光场', exact: true }).click();
+  await expect(stage).toHaveAttribute('data-column-preset', 'reference');
+});
+
 test('three native scenes are lazy, have bounded draws, and keep photo scenes separate', async ({ page }) => {
   const errors: string[] = [], requests: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -22,11 +62,12 @@ test('three native scenes are lazy, have bounded draws, and keep photo scenes se
   await expect(page.getByRole('tab', { name: '六边形灯幕', exact: true })).toHaveCount(0);
   for (const [id, name] of scenes) {
     await select(page, id, name);
-    await expect(page.locator('.canvas-host')).toHaveAttribute('data-display-count', id === 'field' ? '42' : '1');
+    await expect(page.locator('.canvas-host')).toHaveAttribute('data-display-count', id === 'field' ? /^[1-9]\d+$/ : '1');
     await expect.poll(async () => Number(await page.locator('.canvas-host').getAttribute('data-draw-calls'))).toBeLessThan(400);
     await expect(page.locator('.error-banner')).toHaveCount(0);
   }
-  expect(requests.some(url => /\.glb(?:\?|$)|night-city\.hdr/.test(url))).toBe(false);
+  expect(requests.filter(url => /night\/models\/.*-web\.glb/.test(url))).toHaveLength(2);
+  expect(requests.some(url => /lightform\/models|night-city\.hdr/.test(url))).toBe(false);
   await page.locator('[data-module=photo]').click(); await ready(page);
   await expect(page.locator('.scene-tabs [role=tab]')).toHaveText(['888 Collins', '弧形点阵展馆', '球形展馆']);
   expect(errors).toEqual([]);
@@ -131,6 +172,9 @@ test('the plaza ignores uploaded media and particles, and owns its warm-white up
   await page.locator('.lightform-studio input[type=file]').setInputFiles({ name: 'shared-magenta.png', mimeType: 'image/png', buffer: magenta });
   await page.getByRole('button', { name: '隐藏素材面板', exact: true }).click();
   await select(page, 'field', '光柱广场');
+  await page.getByRole('button', { name: '显示素材面板', exact: true }).click();
+  await page.getByRole('button', { name: '暖白呼吸', exact: true }).click();
+  await page.getByRole('button', { name: '隐藏素材面板', exact: true }).click();
   const stage = page.locator('.canvas-host');
   await expect(stage).toHaveAttribute('data-source', 'autonomous');
   await expect(page.locator('input[type=file]')).toHaveCount(0);

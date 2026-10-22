@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { NightSceneId } from './studioTypes';
 import { mirroredHemisphereU, type MediaFit } from './mediaMapping';
+import type { ColumnPreset } from './columnLighting';
 
 export interface NativeNightScene {
   scene: THREE.Scene; ready?: Promise<void>; cameraPosition: THREE.Vector3; target: THREE.Vector3; fov?: number;
@@ -8,6 +9,10 @@ export interface NativeNightScene {
   lightingState?: { fill: number; breath: number };
   model?: { parts: Map<string, THREE.Group>; design?: { width: number; depth: number; lobbyHeight: number; height: number; lowHeight: number; leftHeight?: number; roofBackDrop?: number; cornerRadius: number } };
   material?: THREE.ShaderMaterial; materials?: THREE.ShaderMaterial[];
+  displayMesh?: THREE.Mesh; displayGrid?: [number, number]; displayAspect?: number;
+  cameraLimits?: { azimuth: number; polar: number; minDistance: number; maxDistance: number };
+  setColumnPreset?: (preset: ColumnPreset) => void;
+  resize?: (width: number, height: number) => void;
 }
 export type DisplaySurface = {
   mesh: THREE.Mesh; nativeGeometry: THREE.BufferGeometry; geometry: THREE.BufferGeometry;
@@ -18,6 +23,7 @@ export type NightSurfaces = { surfaces: DisplaySurface[]; aspect: number; fit: M
 /** Keep upstream preview colors/animation while making the existing display controls live. */
 function configureNativeLight(material: THREE.Material, id: NightSceneId) {
   if (!(material instanceof THREE.ShaderMaterial) || id === 'field') return;
+  if (material.userData.authoredDisplay) return;
   material.uniforms.studioSize = { value: 1 }; material.uniforms.studioLed = { value: 1 };
   let shader = material.fragmentShader;
   if (id === 'dome') shader = shader.replace('float aperture=.26+.065*seed;', 'float aperture=(.26+.065*seed)*studioSize;')
@@ -61,11 +67,6 @@ export function createMediaMaterial(columns: number, rows: number, column = fals
   });
 }
 
-function lengthsOf(points: THREE.Vector2[]) {
-  const lengths = [0];
-  for (let i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + points[i].distanceTo(points[i - 1]));
-  return lengths;
-}
 function maskGeometry(geometry: THREE.BufferGeometry, mask?: number[]) {
   geometry.setAttribute('mediaMask', new THREE.Float32BufferAttribute(mask ?? Array(geometry.attributes.position.count).fill(1), 1));
   return geometry;
@@ -88,24 +89,12 @@ export function bindNightSurfaces(id: NightSceneId, native: NativeNightScene): N
     return { surfaces, aspect: 2, fit: 'contain' };
   }
   if (id === 'fluid') {
-    const mesh = findMeshes(native.scene).find(mesh => mesh.material === native.material)!;
-    const geometry = mesh.geometry.clone(), p = geometry.attributes.position, oldUv = geometry.attributes.uv, uv: number[] = [];
-    const samples = Array.from({ length: 1025 }, (_, i) => new THREE.Vector2(Math.cos(i / 1024 * Math.PI * 2) * 11.7, Math.sin(i / 1024 * Math.PI * 2) * 4.9));
-    const lengths = lengthsOf(samples), circumference = lengths.at(-1)!;
-    const seamAngle = Math.PI * 1.5, seamLength = lengths[768];
-    for (let i = 0; i < p.count; i++) {
-      const angle = oldUv.getX(i) * Math.PI * 2;
-      const index = oldUv.getX(i) * 1024, j = Math.min(1023, Math.floor(index));
-      let u = (THREE.MathUtils.lerp(lengths[j], lengths[j + 1], index - j) - seamLength) / circumference;
-      if (angle < seamAngle - 1e-5) u += 1;
-      uv.push(1 - mirroredHemisphereU(u), 1 - oldUv.getY(i));
-    }
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    bind(mesh, maskGeometry(geometry), createMediaMaterial(210, 28));
-    return { surfaces, aspect: circumference / 2 / 4.8, fit: 'stretch' };
+    const mesh = native.displayMesh;
+    if (!mesh?.geometry.attributes.uv) throw new Error('GLB 缺少 MEDIA_FACADE 或连续 UV。');
+    const grid = native.displayGrid ?? [165, 30];
+    bind(mesh, maskGeometry(mesh.geometry.clone()), createMediaMaterial(...grid));
+    return { surfaces, aspect: native.displayAspect ?? 8, fit: 'stretch' };
   }
-  // The plaza owns its warm-white light cycle; it has no media or pointer surface.
+  // The plaza owns its light presets; it has no media or pointer surface.
   return { surfaces, aspect: 1, fit: 'contain' };
 }
-
-function findMeshes(root: THREE.Object3D) { const meshes: THREE.Mesh[] = []; root.traverse(n => { if (n instanceof THREE.Mesh) meshes.push(n); }); return meshes; }

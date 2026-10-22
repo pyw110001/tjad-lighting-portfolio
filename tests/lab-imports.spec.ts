@@ -260,7 +260,7 @@ test('Lightform keeps one uploaded asset across scenes and releases it on replac
   for (const [id, name] of [['dome', '城市穹顶'], ['fluid', '流线灯幕'], ['field', '光柱广场']]) {
     await page.getByRole('tab', { name, exact: true }).click();
     await expect(stage).toHaveAttribute('data-scene', id);
-    await expect(stage).toHaveAttribute('data-display-count', id === 'field' ? '42' : '1');
+    await expect(stage).toHaveAttribute('data-display-count', id === 'field' ? /^[1-9]\d+$/ : '1');
     await expect.poll(async () => Number(await stage.getAttribute('data-draw-calls'))).toBeLessThan(400);
   }
   await page.getByRole('tab', { name: '城市穹顶', exact: true }).click();

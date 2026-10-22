@@ -1,4 +1,5 @@
 import type { FieldMedia } from '../particles/types';
+import type { ColumnPreset } from './columnLighting';
 export type SceneId = 'sphere' | 'collins' | 'facade';
 export type NightSceneId = 'dome' | 'fluid' | 'field';
 export type DisplaySettings = {
@@ -23,13 +24,14 @@ export interface StudioRenderer<S extends string = SceneId> {
   setDisplay(id: S, settings: DisplaySettings): void;
   setView(view: 'front' | 'side' | 'high'): void;
   resetView(): void;
+  setColumnPreset?(preset: ColumnPreset): void;
   exportPng(): void;
   dispose(): void;
 }
 export type StudioFactory<S extends string = SceneId> = (host: HTMLElement, onReady: () => void, onError: (message: string) => void,
   onPointer?: (pointer: StudioPointer | null) => void) => StudioRenderer<S>;
 export type StudioScene<S extends string> = { id: S; name: string; label: string; media: MediaInfo; settings: DisplaySettings;
-  controls: 'strips' | 'dots' | 'sphere' | 'columns'; caption: string; note: string; independent?: boolean };
+  controls: 'strips' | 'dots' | 'sphere' | 'columns'; caption: string; note: string; independent?: boolean; referenceView?: boolean };
 export type StudioConfig<S extends string> = { initial: S; scenes: readonly StudioScene<S>[] };
 export const DEFAULT_SETTINGS: Record<SceneId, DisplaySettings> = {
   sphere: { brightness: 58, pixel: 60, ledTexture: 100, dotGap: 45, offset: 0, glow: 55, vertical: 0 },

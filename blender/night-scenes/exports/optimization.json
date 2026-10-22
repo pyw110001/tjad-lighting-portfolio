@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "field",
+    "standardBytes": 17542324,
+    "webBytes": 5538012,
+    "compression": "EXT_meshopt_compression + KHR_texture_basisu"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "kind": "field",
+  "sourceBlend": "D:\\01_AIGC\\CODEX\\AI_LIGHTING_WEBSITE\\blender\\night-scenes\\field.blend",
+  "sourceTriangles": 176332,
+  "roundTripTriangles": 176332,
+  "sourceMeshes": 79,
+  "roundTripMeshes": 79,
+  "missingSourceImages": [],
+  "bakedMeshes": [
+    "KIOSK_BAKE"
+  ],
+  "displayMeshes": 56,
+  "scaleToleranceMetres": 0.001,
+  "sourceModified": false
+}

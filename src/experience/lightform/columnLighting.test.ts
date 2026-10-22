@@ -22,3 +22,17 @@ it('owns one lighting clock and warm-white signal for all column heights', () =>
   expect(short.uniforms.uMedia).toBeUndefined();
   short.dispose(); tall.dispose();
 });
+
+it('changes every column preset together and restarts the warm reveal without changing its brightness', () => {
+  const lighting = createColumnLighting('reference');
+  const a = lighting.material(3, .7, 0, true), b = lighting.material(5, 1.5, 1, true);
+  a.uniforms.uOn.value = .6;
+  lighting.update(100); lighting.update(104);
+  expect(a.uniforms.uReference.value).toBe(1);
+  lighting.setPreset('warm'); lighting.update(110);
+  expect(b.uniforms.uReference.value).toBe(0);
+  expect(b.uniforms.uFill.value).toBe(0);
+  expect(b.uniforms.uOn.value).toBe(.6);
+  expect(a.uniforms.uPhase.value).not.toBe(b.uniforms.uPhase.value);
+  a.dispose(); b.dispose();
+});
